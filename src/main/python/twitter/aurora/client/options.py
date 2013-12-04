@@ -47,26 +47,6 @@ def add_verbosity_options():
                  help='Quiet logging. (default: %default)')
 
 
-def parse_shards_into(option, opt, value, parser):
-  """Parse lists of shard or shard ranges into a set().
-
-     Examples:
-       0-2
-       0,1-3,5
-       1,3,5
-  """
-  def shard_range_parser(shards):
-    result = set()
-    for part in shards.split(','):
-      x = part.split('-')
-      result.update(range(int(x[0]), int(x[-1]) + 1))
-    return sorted(result)
-
-  try:
-    setattr(parser.values, option.dest, shard_range_parser(value))
-  except ValueError as e:
-    raise optparse.OptionValueError('Failed to parse: %s' % e)
-
 
 def parse_aurora_job_key_into(option, opt, value, parser):
   try:
