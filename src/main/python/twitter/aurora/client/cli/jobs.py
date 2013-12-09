@@ -1,20 +1,32 @@
 import argparse
 from collections import namedtuple
-from twitter.aurora.cli import Noun, Verb, Context
+
+from twitter.aurora.client.api.disambiguator import LiveJobDisambiguator
+from twitter.aurora.client.api.job_monitor import JobMonitor
+from twitter.aurora.client.cli import (
+    EXIT_COMMAND_FAILURE,
+    EXIT_INVALID_COMMAND,
+    EXIT_INVALID_CONFIGURATION,
+    EXIT_INVALID_PARAMETER,
+    EXIT_NETWORK_ERROR,
+    EXIT_OK,
+    EXIT_PERMISSION_VIOLATION,
+    EXIT_TIMEOUT,
+    EXIT_UNKNOWN_ERROR,
+    Noun,
+    Verb
+)
+from twitter.aurora.client.cli.context import AuroraCommandContext
 from twitter.aurora.common.aurora_job_key import AuroraJobKey
 from twitter.aurora.client.config import get_config
-from twitter.aurora.client.base import (
-  check_and_log_response,
-  die,
-  synthesize_url)
-from twitter.aurora.client.api.disambiguator import LiveJobDisambiguator
-from twitter.aurora.client.factory import make_client, make_client_factory
-from twitter.thermos.common.options import add_binding_to
+from twitter.aurora.client.factory import make_client
 
-# Note: this parse_shards_into is a duplicate of a function in client v1 options.py.
+from pystachio.config import Config
+
+# Note: this parse_shards_into is a near duplicate of a function in client v1 options.py.
 # I don't want client v2 to have any dependencies on v1 code, and I don't want to modify
 # client v1 code to depend on anything in client v2, thus this duplicate.
-def parse_shards_into(option, opt, value, parser):
+def parse_shards_into(values):
   """Parse lists of shard or shard ranges into a set().
 
      Examples:
@@ -29,51 +41,10 @@ def parse_shards_into(option, opt, value, parser):
       result.update(range(int(x[0]), int(x[-1]) + 1))
     return sorted(result)
 
-  try:
-    setattr(parser.values, option.dest, shard_range_parser(value))
-  except ValueError as e:
-    raise optparse.OptionValueError('Failed to parse: %s' % e)
-
-
-class AuroraCommandContext(Context):
-  def get_client(self):
-    pass
-
-  def get_packer(self, cluster):
-    pass
-
-  def get_api(self, cluster):
-    return make_client(cluster)
-
-  def get_job_config(self, job_key, config_file):
-    select_cluster = job_key.cluster
-    select_env = job_key.env
-    select_role = job_key.role
-    jobname = job_key.name
-    return get_config(
-      jobname,
-      config_file,
-      self.options.json,
-      self.options.bindings,
-      select_cluster=job_key.cluster,
-      select_role=job_key.role,
-      select_env=job_key.env)
-
-  def open_page(self, url):
-    import webbrowser
-    webbrowser.open_new_tab(url)
-
-  def open_job_page(self, api, config):
-    self.open_page(synthesize_url(api.scheduler.scheduler().url, config.role(),
-        config.environment(), config.name()))
-
-  def handle_open(self, api):
-    self.open_page(synthesize_url(api.scheduler.scheduler().url,
-      self.options.jobspec.role(), self.options.jobspec.environment(), self.options.jobspec.name()))
-
-
-  def exit(self, code):
-    sys.exit(1)
+  result = []
+  for v in values:
+    result.append(shard_range_parser(value))
+  return result
 
 
 class CreateJobCommand(Verb):
@@ -86,6 +57,7 @@ class CreateJobCommand(Verb):
     return 'Create a job using aurora'
 
   CREATE_STATES = ('PENDING','RUNNING','FINISHED')
+
   def setup_options_parser(self, parser):
     parser.add_argument('--bind', type=str, default=[], dest='bindings',
         action='append',
@@ -97,16 +69,17 @@ class CreateJobCommand(Verb):
         help='Read job configuration in json format')
     parser.add_argument('--wait_until', choices=self.CREATE_STATES,
         default='PENDING',
-        help='Block the client until all the tasks have transitioned into the requested state.  Default: PENDING')
+        help=('Block the client until all the tasks have transitioned into the requested state. '
+                        'Default: PENDING'))
     parser.add_argument('jobspec', type=AuroraJobKey.from_path)
     parser.add_argument('config_file', type=str)
 
   def execute(self, context):
     try:
       config = context.get_job_config(context.options.jobspec, context.options.config_file)
-    except ValueError as v:
-      print('Error loading job configuration: %s' % v)
-      context.exit(1)
+    except Config.InvalidConfigError as e:
+      print('Error loading job configuration: %s' % e)
+      context.exit(EXIT_INVALID_CONFIGURATION)
     api = context.get_api(config.cluster())
     monitor = JobMonitor(api, config.role(), config.environment(), config.name())
     resp = api.create_job(config)
@@ -115,7 +88,7 @@ class CreateJobCommand(Verb):
       context.open_job_page(api, config)
     if context.options.wait_until == 'RUNNING':
       monitor.wait_until(monitor.running_or_finished)
-    elif options.wait_until == 'FINISHED':
+    elif context.options.wait_until == 'FINISHED':
       monitor.wait_until(monitor.terminal)
 
 
@@ -134,11 +107,12 @@ class KillJobCommand(Verb):
     parser.add_argument('--config', type=str, default=None, dest='config',
          help='Config file for the job, possibly containing hooks')
     parser.add_argument('jobspec', type=AuroraJobKey.from_path)
-#Old shards callback=parse_shards_into,
 
   def execute(self, context):
+    # Old shards callback=parse_shards_into,
+    shards = parse_shards_into(context.options.shards)
     api = context.get_api(context.options.jobspec.cluster())
-    resp = api.kill_job(context.options.jobspec, context.options.shards, config=context.options.config)
+    resp = api.kill_job(context.options.jobspec, shards, config=context.options.config)
     context.check_and_log_response(resp)
     context.handle_open(api)
 
@@ -152,13 +126,11 @@ class Job(Noun):
   def help(self):
     return "Work with an aurora job"
 
-  def __init__(self):
+  @classmethod
+  def context_type(cls):
+    return
+
+  def __init__(self, context_type=AuroraCommandContext):
     super(Job, self).__init__()
     self.register_verb(CreateJobCommand())
     self.register_verb(KillJobCommand())
-
-
-  def create_context(self, options):
-    return AuroraCommandContext(options)
-
-

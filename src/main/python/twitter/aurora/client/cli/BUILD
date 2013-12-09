@@ -7,7 +7,7 @@ python_binary(
 
 python_library(
   name='cli',
-  sources = [ '__init__.py', 'jobs.py' ],
+  sources = [ '__init__.py', 'context.py', 'jobs.py' ],
   dependencies = [
     pants('aurora/twitterdeps/src/python/twitter/common/python'),
     pants('src/main/python/twitter/aurora/client/api:command_runner'),

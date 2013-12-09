@@ -3,23 +3,23 @@ from abc import abstractmethod
 import argparse
 import sys
 
+
 EXIT_OK = 0
-EXIT_COMMAND_FAILURE=3
-EXIT_INVALID_COMMAND=4
-EXIT_INVALID_PARAMETER=5
-EXIT_NETWORK_ERROR=6
-EXIT_PERMISSION_VIOLATION=7
-EXIT_TIMEOUT=8
+EXIT_INVALID_CONFIGURATION=3
+EXIT_COMMAND_FAILURE=4
+EXIT_INVALID_COMMAND=5
+EXIT_INVALID_PARAMETER=6
+EXIT_NETWORK_ERROR=7
+EXIT_PERMISSION_VIOLATION=8
+EXIT_TIMEOUT=9
 EXIT_UNKNOWN_ERROR=20
 
 
 class Context(object):
   class ArgumentException(Exception): pass
 
-  def __init__(self, options):
+  def set_options(self, options):
     self.options = options
-
-
 
 class AuroraCommand(object):
   def setup_options_parser(self, argparser):
@@ -66,7 +66,8 @@ class CommandLine(object):
     if options.noun not in self.nouns:
       raise ValueError('Unknown command: %s' % options.noun)
     noun = self.nouns[options.noun]
-    context = noun.create_context(options)
+    context = noun.create_context()
+    context.set_options(options)
     noun.execute(context)
 
 
@@ -101,7 +102,7 @@ class Noun(AuroraCommand):
       vparser = subparser.add_parser(name, help=verb.help)
       verb.setup_options_parser(vparser)
 
-  @abstractmethod
+  @classmethod
   def create_context(self, options):
     pass
 
@@ -134,6 +135,6 @@ def main():
   cmd = AuroraCommandLine()
   return cmd.execute(sys.argv[1:])
 
-#if __name__ == '__main__':
-#  main(sys.argv)
+if __name__ == '__main__':
+  main(sys.argv)
 
