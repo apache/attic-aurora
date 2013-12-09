@@ -1,32 +1,16 @@
-import argparse
-from collections import namedtuple
-
-from twitter.aurora.client.api.disambiguator import LiveJobDisambiguator
 from twitter.aurora.client.api.job_monitor import JobMonitor
 from twitter.aurora.client.cli import (
-    EXIT_COMMAND_FAILURE,
-    EXIT_INVALID_COMMAND,
     EXIT_INVALID_CONFIGURATION,
-    EXIT_INVALID_PARAMETER,
-    EXIT_NETWORK_ERROR,
-    EXIT_OK,
-    EXIT_PERMISSION_VIOLATION,
-    EXIT_TIMEOUT,
-    EXIT_UNKNOWN_ERROR,
     Noun,
     Verb
 )
 from twitter.aurora.client.cli.context import AuroraCommandContext
 from twitter.aurora.common.aurora_job_key import AuroraJobKey
-from twitter.aurora.client.config import get_config
-from twitter.aurora.client.factory import make_client
 
 from pystachio.config import Config
 
-# Note: this parse_shards_into is a near duplicate of a function in client v1 options.py.
-# I don't want client v2 to have any dependencies on v1 code, and I don't want to modify
-# client v1 code to depend on anything in client v2, thus this duplicate.
-def parse_shards_into(values):
+
+def parse_shards(shards):
   """Parse lists of shard or shard ranges into a set().
 
      Examples:
@@ -34,17 +18,14 @@ def parse_shards_into(values):
        0,1-3,5
        1,3,5
   """
-  def shard_range_parser(shards):
-    result = set()
-    for part in shards.split(','):
-      x = part.split('-')
-      result.update(range(int(x[0]), int(x[-1]) + 1))
-    return sorted(result)
-
-  result = []
-  for v in values:
-    result.append(shard_range_parser(value))
-  return result
+  print('SHARDS="%s"' % shards)
+  if shards is None or shards == '':
+    return None
+  result = set()
+  for part in shards.split(','):
+    x = part.split('-')
+    result.update(range(int(x[0]), int(x[-1]) + 1))
+  return sorted(result)
 
 
 class CreateJobCommand(Verb):
@@ -56,7 +37,7 @@ class CreateJobCommand(Verb):
   def help(self):
     return 'Create a job using aurora'
 
-  CREATE_STATES = ('PENDING','RUNNING','FINISHED')
+  CREATE_STATES = ('PENDING', 'RUNNING', 'FINISHED')
 
   def setup_options_parser(self, parser):
     parser.add_argument('--bind', type=str, default=[], dest='bindings',
@@ -78,8 +59,8 @@ class CreateJobCommand(Verb):
     try:
       config = context.get_job_config(context.options.jobspec, context.options.config_file)
     except Config.InvalidConfigError as e:
-      print('Error loading job configuration: %s' % e)
-      context.exit(EXIT_INVALID_CONFIGURATION)
+      raise context.CommandError(EXIT_INVALID_CONFIGURATION,
+          'Error loading job configuration: %s' % e)
     api = context.get_api(config.cluster())
     monitor = JobMonitor(api, config.role(), config.environment(), config.name())
     resp = api.create_job(config)
@@ -109,10 +90,9 @@ class KillJobCommand(Verb):
     parser.add_argument('jobspec', type=AuroraJobKey.from_path)
 
   def execute(self, context):
-    # Old shards callback=parse_shards_into,
-    shards = parse_shards_into(context.options.shards)
-    api = context.get_api(context.options.jobspec.cluster())
-    resp = api.kill_job(context.options.jobspec, shards, config=context.options.config)
+    shards = parse_shards(context.options.shards)
+    api = context.get_api(context.options.jobspec.cluster)
+    resp = api.kill_job(context.options.jobspec, shards)
     context.check_and_log_response(resp)
     context.handle_open(api)
 
@@ -127,10 +107,10 @@ class Job(Noun):
     return "Work with an aurora job"
 
   @classmethod
-  def context_type(cls):
-    return
+  def create_context(cls):
+    return AuroraCommandContext()
 
-  def __init__(self, context_type=AuroraCommandContext):
+  def __init__(self):
     super(Job, self).__init__()
     self.register_verb(CreateJobCommand())
     self.register_verb(KillJobCommand())

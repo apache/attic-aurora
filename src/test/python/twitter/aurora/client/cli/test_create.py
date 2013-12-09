@@ -1,10 +1,11 @@
 import contextlib
-import unittest
 
-from twitter.aurora.client.cli import AuroraCommandLine
-from twitter.aurora.client.cli.context import AuroraCommandContext
-from twitter.aurora.client.commands.util import AuroraClientCommandTest
-from twitter.aurora.client.config import get_config
+from twitter.aurora.client.cli import (
+    AuroraCommandLine,
+    EXIT_INVALID_CONFIGURATION,
+    EXIT_NETWORK_ERROR
+)
+from twitter.aurora.client.cli.util import AuroraClientCommandTest, FakeAuroraCommandContext
 from twitter.aurora.client.hooks.hooked_api import HookedAuroraClientAPI
 from twitter.aurora.config import AuroraConfig
 from twitter.common.contextutil import temporary_file
@@ -12,9 +13,6 @@ from twitter.common.contextutil import temporary_file
 from gen.twitter.aurora.ttypes import (
     AssignedTask,
     Identity,
-    Response,
-    ResponseCode,
-    Result,
     ScheduledTask,
     ScheduleStatus,
     ScheduleStatusResult,
@@ -23,39 +21,10 @@ from gen.twitter.aurora.ttypes import (
 )
 
 from mock import Mock, patch
-from pystachio.config import Config
-
-
-class FakeAuroraCommandContext(AuroraCommandContext):
-  def __init__(self):
-    super(FakeAuroraCommandContext, self).__init__()
-    self.options = None
-    self.status = []
-    self.fake_api = self.setup_fake_api()
-    self.task_status = []
-    self.showed_urls = []
-
-  def get_api(self, cluster):
-    return self.fake_api
-
-  def setup_fake_api(self):
-    new_fake = Mock(spec=HookedAuroraClientAPI)
-    new_fake.scheduler = Mock()
-    new_fake.scheduler.url = 'http://something_or_other'
-    new_fake.scheduler.getTasksStatus.side_effect = []
-    self.fake_api = new_fake
-    return self.fake_api
-
-  def open_page(self, url):
-    self.showed_urls.append(url)
-
-  def add_expected_status_query_result(self, expected_result):
-    self.task_status.append(expected_result)
-    # each call adds an expected query result, in order.
-    self.fake_api.scheduler.getTasksStatus.side_effect = self.task_status
 
 
 class TestClientCreateCommand(AuroraClientCommandTest):
+
   @classmethod
   def setup_mock_options(cls):
     """set up to get a mock options object."""
@@ -151,14 +120,14 @@ class TestClientCreateCommand(AuroraClientCommandTest):
       with temporary_file() as fp:
         fp.write(self.get_valid_config())
         fp.flush()
-        cmd =  AuroraCommandLine()
-        cmd.execute(['job', 'create', '--wait_until=RUNNING', 'west/mchucarroll/test/hello', fp.name])
+        cmd = AuroraCommandLine()
+        cmd.execute(['job', 'create', '--wait_until=RUNNING', 'west/mchucarroll/test/hello',
+            fp.name])
 
       # Now check that the right API calls got made.
       # Check that create_job was called exactly once, with an AuroraConfig parameter.
       self.assert_create_job_called(api)
       self.assert_scheduler_called(api, mock_query, 2)
-
 
   def test_create_job_delayed(self):
     """Run a test of the "create" command against a mocked-out API:
@@ -169,16 +138,17 @@ class TestClientCreateCommand(AuroraClientCommandTest):
         patch('time.sleep'),
         patch('twitter.aurora.client.cli.jobs.Job.create_context', return_value=mock_context)):
       mock_query = self.create_mock_query()
-      for result in [ ScheduleStatus.INIT, ScheduleStatus.PENDING, ScheduleStatus.PENDING,
-          ScheduleStatus.RUNNING, ScheduleStatus.FINISHED ]:
+      for result in [ScheduleStatus.INIT, ScheduleStatus.PENDING, ScheduleStatus.PENDING,
+          ScheduleStatus.RUNNING, ScheduleStatus.FINISHED]:
         mock_context.add_expected_status_query_result(self.create_mock_status_query_result(result))
       api = mock_context.get_api('west')
       api.create_job.return_value = self.get_createjob_response()
       with temporary_file() as fp:
         fp.write(self.get_valid_config())
         fp.flush()
-        cmd =  AuroraCommandLine()
-        cmd.execute(['job', 'create', '--wait_until=RUNNING', 'west/mchucarroll/test/hello', fp.name])
+        cmd = AuroraCommandLine()
+        cmd.execute(['job', 'create', '--wait_until=RUNNING', 'west/mchucarroll/test/hello',
+            fp.name])
         # Now check that the right API calls got made.
         # Check that create_job was called exactly once, with an AuroraConfig parameter.
         self.assert_create_job_called(api)
@@ -192,16 +162,16 @@ class TestClientCreateCommand(AuroraClientCommandTest):
     with patch('twitter.aurora.client.cli.jobs.Job.create_context', return_value=mock_context):
       mock_context.add_expected_status_query_result(
           self.create_mock_status_query_result(ScheduleStatus.INIT))
-      api = mock_context.get_api('west')      
+      api = mock_context.get_api('west')
       api.create_job.return_value = self.get_failed_createjob_response()
       # This is the real test: invoke create as if it had been called by the command line.
       with temporary_file() as fp:
         fp.write(self.get_valid_config())
         fp.flush()
-        cmd =  AuroraCommandLine()
-        self.assertRaises(SystemExit, 
-            cmd.execute,
-            ['job', 'create', '--wait_until=RUNNING', 'west/mchucarroll/test/hello', fp.name])
+        cmd = AuroraCommandLine()
+        result = cmd.execute(['job', 'create', '--wait_until=RUNNING',
+            'west/mchucarroll/test/hello', fp.name])
+        assert result == EXIT_NETWORK_ERROR
 
       # Now check that the right API calls got made.
       # Check that create_job was called exactly once, with an AuroraConfig parameter.
@@ -218,14 +188,13 @@ class TestClientCreateCommand(AuroraClientCommandTest):
       with temporary_file() as fp:
         fp.write(self.get_invalid_config('invalid_clause=oops'))
         fp.flush()
-        cmd =  AuroraCommandLine()
-        self.assertRaises(SystemExit, 
-            cmd.execute,
-            ['job', 'create', '--wait_until=RUNNING', 'west/mchucarroll/test/hello', fp.name])
+        cmd = AuroraCommandLine()
+        result = cmd.execute(['job', 'create', '--wait_until=RUNNING',
+            'west/mchucarroll/test/hello', fp.name])
+        assert result == EXIT_INVALID_CONFIGURATION
 
       # Now check that the right API calls got made.
       # Check that create_job was not called.
-      api = mock_context.get_api('west')      
+      api = mock_context.get_api('west')
       assert api.create_job.call_count == 0
       assert api.scheduler.getTasksStatus.call_count == 0
-

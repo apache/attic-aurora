@@ -1,34 +1,23 @@
-import argparse
-import sys
-
 from twitter.aurora.client.cli import Context, EXIT_NETWORK_ERROR
-from twitter.aurora.common.aurora_job_key import AuroraJobKey
 from twitter.aurora.client.config import get_config
-from twitter.aurora.client.base import (
-  check_and_log_response,
-  synthesize_url)
+from twitter.aurora.client.base import synthesize_url
 from twitter.aurora.client.factory import make_client
 from twitter.common import log
 
 from gen.twitter.aurora.ttypes import ResponseCode
 
-class AuroraCommandContext(Context):
-  def get_packer(self, cluster):
-    pass
 
-  def check_and_log_response(self, resp):
-    log.info('Response from scheduler: %s (message: %s)'
-        % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.message))
-    if resp.responseCode != ResponseCode.OK:
-      sys.exit(EXIT_NETWORK_ERROR)
+class AuroraCommandContext(Context):
+  """A context object used by Aurora commands to manage command processing state
+  and common operations.
+  """
 
   def get_api(self, cluster):
+    """Creates an API object for a specified cluster"""
     return make_client(cluster)
 
   def get_job_config(self, job_key, config_file):
-    select_cluster = job_key.cluster
-    select_env = job_key.env
-    select_role = job_key.role
+    """Loads a job configuration from a config file"""
     jobname = job_key.name
     return get_config(
       jobname,
@@ -49,8 +38,10 @@ class AuroraCommandContext(Context):
 
   def handle_open(self, api):
     self.open_page(synthesize_url(api.scheduler.scheduler().url,
-      self.options.jobspec.role(), self.options.jobspec.environment(), self.options.jobspec.name()))
+      self.options.jobspec.role, self.options.jobspec.env, self.options.jobspec.name))
 
-
-  def exit(self, code):
-    sys.exit(code)
+  def check_and_log_response(self, resp):
+    log.info('Response from scheduler: %s (message: %s)'
+        % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.message))
+    if resp.responseCode != ResponseCode.OK:
+      raise self.CommandError(EXIT_NETWORK_ERROR, resp.message)
