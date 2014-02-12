@@ -1,16 +1,16 @@
 Aurora User Guide
 -----------------
-[Overview](#Overview)
-[Aurora Job Lifecycle](#Lifecycle)
-&nbsp;&nbsp;&nbsp;&nbsp;[Life Of A Task](#Life)
-&nbsp;&nbsp;&nbsp;&nbsp;[`PENDING` to `RUNNING` states](#Pending)
-&nbsp;&nbsp;&nbsp;&nbsp;[Task Updates](#Updates)
-&nbsp;&nbsp;&nbsp;&nbsp;[Giving Priority to Production Tasks: `PREEMPTING`](#Giving)
-&nbsp;&nbsp;&nbsp;&nbsp;[Natural Termination: `FINISHED`, `FAILED`](#Natural)
-&nbsp;&nbsp;&nbsp;&nbsp;[Forceful Termination: `KILLING`, `RESTARTING`](#Forceful)
-[Configuration](#Configuration)
-[Creating Aurora Jobs](#Creating)
-[Interacting With Aurora Jobs](#Interacting)
+- [Overview](#Overview)
+- [Aurora Job Lifecycle](#Lifecycle)
+  - [Life Of A Task](#Life)
+  - [`PENDING` to `RUNNING` states](#Pending)
+  - [Task Updates](#Updates)
+  - [Giving Priority to Production Tasks: `PREEMPTING`](#Giving)
+  - [Natural Termination: `FINISHED`, `FAILED`](#Natural)
+  - [Forceful Termination: `KILLING`, `RESTARTING`](#Forceful)
+- [Configuration](#Configuration)
+- [Creating Aurora Jobs](#Creating)
+- [Interacting With Aurora Jobs](#Interacting)
 
 <a name="Overview"></a>Overview
 -------------------------------
