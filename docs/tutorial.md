@@ -78,7 +78,7 @@ are written in a Python variant).
     # run the script
     hello_world = Process(
       name = 'hello_world',
-      cmdline = 'python2.6 hello_world.py')
+      cmdline = 'python hello_world.py')
 
     # describe the task
     hello_world_task = SequentialTask(
