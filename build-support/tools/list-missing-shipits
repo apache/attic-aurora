@@ -16,7 +16,7 @@
 #
 """Utility to show outstanding reviews for the project
 
-Usage: list-missing-shipits [--rb-server=RB_SERVER_URL]
+Usage: list-missing-shipits [--server=RB_SERVER_URL --project=RB_PROJECT_NAME]
 """
 from __future__ import print_function
 
@@ -91,8 +91,18 @@ class ReviewRequest(object):
 
 class Reviewboard(object):
   def __init__(self, url=None):
-    self._path = os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), '..', '..', 'rbt'))
+    def find_rbt():
+      for path in os.environ['PATH'].split(os.pathsep):
+        fullpath = os.path.join(path, 'rbt')
+        if os.access(fullpath, os.X_OK):
+          return fullpath
+      return None
+
+    self._path = find_rbt()
     self._url = url
+
+    if self._path == None:
+      sys.exit('Error: rbt not found on PATH.')
 
   def _get(self, resource, params={}):
     base_cmd = [self._path, 'api-get']
@@ -121,6 +131,10 @@ def main():
                     dest='server',
                     help='ReviewBoard server',
                     default=None)
+  parser.add_option('--project',
+                    dest='project',
+                    help='ReviewBoard project',
+                    default='Aurora')
   (options, args) = parser.parse_args()
 
   api = Reviewboard(options.server)
@@ -130,7 +144,7 @@ def main():
     return '%sr/%s' % (server_url, id)
 
   pending_requests = api.get_review_requests({
-      'to-groups': 'Aurora',
+      'to-groups': options.project,
       'status': 'pending',
     })
 
@@ -174,7 +188,7 @@ def main():
   updated_from = ((datetime.datetime.utcnow() - datetime.timedelta(days=1))
                   .replace(microsecond=0).isoformat())
   recently_submitted = api.get_review_requests({
-      'to-groups': 'Aurora',
+      'to-groups': options.project,
       'status': 'submitted',
       'last-updated-from': updated_from
     })
