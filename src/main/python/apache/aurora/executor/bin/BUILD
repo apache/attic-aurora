@@ -19,6 +19,7 @@ python_binary(
   ignore_errors = True,
   always_write_cache = True,
   dependencies = [
+    pants('3rdparty/python:argparse'),
     pants('3rdparty/python:twitter.common.app'),
     pants('3rdparty/python:twitter.common.log'),
     pants('3rdparty/python:twitter.common.metrics'),

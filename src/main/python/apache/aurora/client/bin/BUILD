@@ -16,7 +16,8 @@ python_binary(
   name = 'aurora_client',
   entry_point = 'apache.aurora.client.bin.aurora_client:proxy_main',
   dependencies = [
-    pants(':aurora_client_lib')
+    pants(':aurora_client_lib'),
+    pants('3rdparty/python:argparse')
   ]
 )
 

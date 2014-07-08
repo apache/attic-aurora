@@ -111,6 +111,7 @@ python_library(
     pants(':executor_detector'),
     pants(':executor_base'),
     pants('3rdparty/python:mesos'),
+    pants('3rdparty/python:argparse'),
     pants('3rdparty/python:psutil'),
     pants('3rdparty/python:twitter.common.collections'),
     pants('3rdparty/python:twitter.common.exceptions'),

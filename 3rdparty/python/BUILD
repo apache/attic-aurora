@@ -27,7 +27,7 @@ python_requirement_library(
   ]
 )
 
-COMMONS_VERSION = '0.3.0'
+COMMONS_VERSION = '0.3.1'
 
 make_link('argparse', '1.2.1')
 make_link('bottle', '0.11.6')
@@ -56,7 +56,7 @@ make_link('twitter.common.log', '%s' % COMMONS_VERSION)
 make_link('twitter.common.metrics', '%s' % COMMONS_VERSION)
 make_link('twitter.common.options', '%s' % COMMONS_VERSION)
 make_link('twitter.common.process', '%s' % COMMONS_VERSION)
-make_link('twitter.common.python', '0.5.4')
+make_link('twitter.common.python', '0.5.7')
 make_link('twitter.common.quantity', '%s' % COMMONS_VERSION)
 make_link('twitter.common.recordio', '%s' % COMMONS_VERSION)
 make_link('twitter.common.rpc', '%s' % COMMONS_VERSION)
