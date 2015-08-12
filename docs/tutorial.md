@@ -186,9 +186,8 @@ This returns:
     vagrant@precise64:~$ aurora job create devcluster/www-data/devel/hello_world \
         /vagrant/hello_world.aurora
      INFO] Creating job hello_world
-     INFO] Response from scheduler: OK (message: 1 new tasks pending for job
-      www-data/devel/hello_world)
-     INFO] Job url: http://precise64:8081/scheduler/www-data/devel/hello_world
+     INFO] Checking status of devcluster/www-data/devel/hello_world
+    Job create succeeded: job url=http://192.168.33.7:8081/scheduler/www-data/devel/hello_world
 
 ## Watching the Job Run
 
@@ -226,7 +225,7 @@ It looks like we made a typo in our Python script. We wanted `xrange`,
 not `xrang`. Edit the `hello_world.py` script to use the correct function and
 we will try again.
 
-    aurora job update devcluster/www-data/devel/hello_world /vagrant/hello_world.aurora
+    aurora update start devcluster/www-data/devel/hello_world /vagrant/hello_world.aurora
 
 This time, the task comes up, we inspect the page, and see that the
 `hello_world` process is running.
@@ -244,8 +243,9 @@ Now that we're done, we kill the job using the Aurora client:
 
     vagrant@precise64:~$ aurora job killall devcluster/www-data/devel/hello_world
      INFO] Killing tasks for job: devcluster/www-data/devel/hello_world
-     INFO] Response from scheduler: OK (message: Tasks killed.)
-     INFO] Job url: http://precise64:8081/scheduler/www-data/devel/hello_world
+     INFO] Instances to be killed: [0]
+    Successfully killed instances [0]
+    Job killall succeeded
     vagrant@precise64:~$
 
 The job page now shows the `hello_world` tasks as completed.
