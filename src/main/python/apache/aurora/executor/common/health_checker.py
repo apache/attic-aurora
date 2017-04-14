@@ -160,6 +160,11 @@ class ThreadedHealthChecker(ExceptionalThread):
         self.healthy = False
         self.reason = reason
     else:
+      if self.snoozed:
+        log.debug('Reset consecutive successes counter.')
+        self.current_consecutive_successes = 0
+        return
+
       self.current_consecutive_successes += 1
 
       if not self.running:
