@@ -19,13 +19,12 @@ import signal
 import socket
 import struct
 import subprocess
-import sys
 import threading
 import time
 
 from mesos.interface import mesos_pb2
 from twitter.common import log
-from twitter.common.dirutil import safe_mkdtemp
+from twitter.common.dirutil import chmod_plus_x, safe_mkdtemp
 from twitter.common.log.options import LogOptions
 from twitter.common.quantity import Amount, Time
 
@@ -254,7 +253,7 @@ class ThermosTaskRunner(TaskRunner):
     if getpass.getuser() == 'root' and self._role:
       params.update(setuid=self._role)
 
-    cmdline_args = [sys.executable, self._runner_pex]
+    cmdline_args = [self._runner_pex]
     cmdline_args.extend(
         '--%s=%s' % (flag, value) for flag, value in params.items() if value is not None)
     if self._enable_chroot:
@@ -271,6 +270,12 @@ class ThermosTaskRunner(TaskRunner):
   def start(self, timeout=MAX_WAIT):
     """Fork the task runner and return once the underlying task is running, up to timeout."""
     self.forking.set()
+
+    try:
+      chmod_plus_x(self._runner_pex)
+    except OSError as e:
+      if e.errno != errno.EPERM:
+        raise TaskError('Failed to chmod +x runner: %s' % e)
 
     self._monitor = TaskMonitor(self._checkpoint_root, self._task_id)
 
