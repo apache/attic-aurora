@@ -6,7 +6,7 @@ Aurora aims to make it extremely quick and easy to take a built application and 
 in a cluster, with an emphasis on reliability. It provides basic operations to manage services
 running in a cluster, such as rolling upgrades.
 
-To very concisely describe Aurora, it is like a distributed monit or distributed supervisord that
+To very concisely describe Aurora, it is like a distributed monitor or a distributed supervisor that
 you can instruct to do things like _run 100 of these, somewhere, forever_.
 
 
