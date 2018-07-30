@@ -1,0 +1,28 @@
+#!/bin/bash -x
+apt-get update
+apt-get -y install java7-runtime-headless curl
+wget -c http://downloads.mesosphere.io/master/ubuntu/12.04/mesos_0.15.0_amd64.deb
+dpkg --install mesos_0.15.0_amd64.deb
+# Get the IP address; eth0 is the net interface we care about.
+export MASTER_IP_ADDRESS=$(ip addr show eth0 | grep 'inet ' | cut -d'/' -f 1 | cut -c '10-')
+cat > /usr/local/sbin/mesos-master.sh <<EOF
+
+#!/bin/bash
+export LD_LIBRARY_PATH=/usr/lib/jvm/java-7-openjdk-amd64/jre/lib/amd64/server
+(
+  while true
+  do
+    /usr/local/sbin/mesos-master --zk=zk://zookeeper:2181/mesos/master --ip=$MASTER_IP_ADDRESS
+    echo "Master exited with $?, restarting."
+  done
+) & disown
+EOF
+chmod +x /usr/local/sbin/mesos-master.sh
+
+cat > /etc/rc.local <<EOF
+#!/bin/sh -e
+/usr/local/sbin/mesos-master.sh >/var/log/mesos-master-stdout.log 2>/var/log/mesos-master-stderr.log
+EOF
+chmod +x /etc/rc.local
+
+/etc/rc.local

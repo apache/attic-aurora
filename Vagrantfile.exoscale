@@ -1,0 +1,84 @@
+#
+#-*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Copyright 2013 Apache Software Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "Linux-Ubuntu-12.04-64-bit-10-GB-Disk"
+  config.ssh.username = "root"
+  config.ssh.private_key_path = "/path/to/your/.ssh/id_rsa.mesos"
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_host = true
+
+  config.vm.provider :cloudstack do |cloudstack, override|
+      cloudstack.api_key = "APIKEY"
+      cloudstack.secret_key = "SECRETKEY"
+      cloudstack.service_offering_id = "71004023-bb72-4a97-b1e9-bc66dfce9470"
+      cloudstack.keypair = "mesos" # for SSH boxes the name of the public key pushed to the machine
+      cloudstack.security_groups = [{
+          :name         => "mesos", 
+          :description  => "created in the Mesos Vagrantfile", 
+          :rules        => [ 
+              {:type => "ingress", :protocol => "TCP", :startport => 22, :endport => 22, :cidrlist => "0.0.0.0/0"}, 
+              {:type => "ingress", :protocol => "TCP", :startport => 1338, :endport => 1338, :cidrlist => "0.0.0.0/0"}, 
+              {:type => "ingress", :protocol => "TCP", :startport => 2181, :endport => 2181, :cidrlist => "0.0.0.0/0"}, 
+              {:type => "ingress", :protocol => "TCP", :startport => 5050, :endport => 5050, :cidrlist => "0.0.0.0/0"}, 
+              {:type => "ingress", :protocol => "TCP", :startport => 8081, :endport => 8083, :cidrlist => "0.0.0.0/0"}
+              ] }]
+  end
+
+
+  config.vm.define "devtools" do |devtools|
+    devtools.vm.provision "shell", inline: "hostname devtools"
+    devtools.vm.hostname = "devtools"
+    devtools.vm.provision "shell", path: "examples/vagrant-exoscale/provision-dev-environment.sh"
+  end
+
+  config.vm.define "zookeeper" do |zookeeper|
+    zookeeper.vm.provision "shell", inline: "hostname zookeeper"
+    zookeeper.vm.hostname = "zookeeper"
+    zookeeper.vm.provision "shell", path: "examples/vagrant-exoscale/provision-zookeeper.sh"
+  end
+
+  config.vm.define "mesos-master" do |master|
+    master.vm.provision "shell", inline: "hostname master"
+    master.vm.hostname = "master"
+    master.vm.provision "shell", path: "examples/vagrant-exoscale/provision-mesos-master.sh"
+  end
+
+  config.vm.define "mesos-slave1" do |slave|
+    slave.vm.provision "shell", inline: "hostname slave1"
+    slave.vm.hostname = "slave1"
+    slave.vm.provision "shell", path: "examples/vagrant-exoscale/provision-mesos-slave.sh"
+  end
+
+  config.vm.define "mesos-slave2" do |slave|
+    slave.vm.provision "shell", inline: "hostname slave2"
+    slave.vm.hostname = "slave2"
+    slave.vm.provision "shell", path: "examples/vagrant-exoscale/provision-mesos-slave.sh"
+  end
+
+  config.vm.define "aurora-scheduler" do |scheduler|
+    scheduler.vm.provision "shell", inline: "hostname aurora"
+    scheduler.vm.hostname = "aurora"
+    scheduler.vm.provision "shell", path: "examples/vagrant-exoscale/provision-aurora-scheduler.sh"
+  end
+end
+
