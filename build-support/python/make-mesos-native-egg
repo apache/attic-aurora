@@ -36,10 +36,13 @@ setup_tempdir() {
 
 # Create a new vagrant box
 init_vagrant_box() {
-  local box_name=$1
+  local image_name=$1
   cat > Vagrantfile <<EOF
+ENV["VAGRANT_DEFAULT_PROVIDER"] ||= "docker"
 Vagrant.require_version ">= 1.5.0"
 Vagrant.configure("2") do |config|
+  config.vm.provision "docker" do |d|
+    d.image = "$image_name"
   config.vm.box = "$box_name"
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "$BOX_RAM_MB"
@@ -47,6 +50,14 @@ Vagrant.configure("2") do |config|
   end
 end
 EOF
+}
+
+init_docker_container() {
+  local image_name=$1
+  local container_name=aurora_${image_name//[:]/_}
+
+  docker pull $image_name
+  docker run -v $(pwd):/mesos-egg --entrypoint /bin/sleep --name $container_name -d $image_name infinity
 }
 
 fetch_and_build_mesos() {
@@ -59,7 +70,7 @@ fetch_and_build_mesos() {
       ./configure --disable-java --enable-optimize
       export MAKEFLAGS="-j$BOX_CPUS"
       make
-      find . -name '*.egg' -exec cp -v {} /vagrant \\;
+      find . -name '*.egg' -exec cp -v {} /mesos-egg \\;
 EOF
 }
 
@@ -128,23 +139,27 @@ UBUNTU_XENIAL64_DEPENDENCIES=(
   libcurl4-nss-dev
   libsasl2-dev
   libsvn-dev
+  make
+  patch
   python-dev
   python-virtualenv
   zlib1g-dev
+  wget
 )
 build_ubuntu_xenial64() {
   local mesos_version=$1 output_basedir=$2
   local python_outdir=$output_basedir/ubuntu/xenial64/python
+  local image_name=ubuntu:xenial
+  local container_name=aurora_${image_name//[:]/_}
+
   pushd "$TMPDIR"
-    # Using bento box due to ubuntu/xenial64
-    # not being configured properly for Vagrant
-    init_vagrant_box bento/ubuntu-16.04
-    vagrant up
-    vagrant ssh <<EOF
+    init_docker_container ubuntu:xenial
+
+    docker exec -i $container_name bash <<EOF
       set -e -u
 
-      sudo apt-get update
-      sudo apt-get -y install ${UBUNTU_XENIAL64_DEPENDENCIES[*]}
+      apt-get update
+      apt-get -y install ${UBUNTU_XENIAL64_DEPENDENCIES[*]}
       $(fetch_and_build_mesos "$mesos_version")
 EOF
     mkdir -pv "$python_outdir"
