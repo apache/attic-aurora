@@ -13,7 +13,8 @@
   or a `VariableBatchUpdateStrategy` object. `QueueUpdateStrategy` and `BatchUpdateStrategy` take
   a single integer argument while `VariableBatchUpdateStrategy` takes a list of positive integers
   as an argument.
-
+- Updated to Mesos 1.6.1
+  
 ### Deprecations and removals:
 
 - Deprecated use of Thrift fields `JobUpdateSettings.waitForBatchCompletion` and
