@@ -106,22 +106,24 @@ EOF
 }
 
 UBUNTU_TRUSTY64_DEPENDENCIES=(
-  g++-4.8
+  g++
   libapr1-dev
   libcurl4-nss-dev
   libsasl2-dev
   libsvn-dev
+  make
+  patch
   python-dev
-  python-virtualenv
+  wget
   zlib1g-dev
 )
 build_ubuntu_trusty64() {
   local mesos_version=$1 output_basedir=$2
   local python_outdir=$output_basedir/ubuntu/trusty64/python
+  local image_name=ubuntu:trusty
+
   pushd "$TMPDIR"
-    init_vagrant_box ubuntu/trusty64
-    vagrant up
-    vagrant ssh <<EOF
+    docker run -i -v $(pwd):/mesos-egg $image_name bash <<EOF
       set -e -u
 
       sudo apt-get update
