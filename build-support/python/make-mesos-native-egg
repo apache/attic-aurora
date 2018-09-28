@@ -213,24 +213,26 @@ CENTOS7_X86_64_DEPENDENCIES=(
   cyrus-sasl-md5
   gcc-c++
   libcurl-devel
+  make
   patch
   python-devel
   subversion-devel
+  wget
   zlib-devel
 )
 build_centos7() {
   local mesos_version=$1 output_basedir=$2
   local python_outdir=$output_basedir/centos/7/python
-  mkdir -pv "$python_outdir"
+  local image_name=centos:7
+
   pushd "$TMPDIR"
-    init_vagrant_box bento/centos-7.1
-    vagrant up
-    vagrant ssh <<EOF
+    docker run -i -v $(pwd):/mesos-egg $image_name bash <<EOF
     set -e -u
 
-    sudo yum -y install ${CENTOS7_X86_64_DEPENDENCIES[*]}
+    yum -y install ${CENTOS7_X86_64_DEPENDENCIES[*]}
     $(fetch_and_build_mesos "$mesos_version")
 EOF
+    mkdir -pv "$python_outdir"
     cp -v mesos.executor*.egg "$python_outdir"
   popd
 }
