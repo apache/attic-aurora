@@ -147,7 +147,6 @@ CENTOS6_X86_64_DEPENDENCIES=(
   patch
   python27-python-devel
   subversion-devel
-  wget
   zlib-devel
 )
 build_centos6() {
@@ -160,6 +159,7 @@ build_centos6() {
     set -e -u
 
     # We need Software Collections for Python 2.7 (we dropped support for 2.6).
+    # wget must get installed before everything else to fetch the additional repos.
     yum -y install centos-release-SCL wget
 
     # Mesos requires gcc 4.8, which is available in devtools-2 on centos 6.
