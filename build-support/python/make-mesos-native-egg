@@ -145,19 +145,16 @@ UBUNTU_XENIAL64_DEPENDENCIES=(
   patch
   python-dev
   python-virtualenv
-  zlib1g-dev
   wget
+  zlib1g-dev
 )
 build_ubuntu_xenial64() {
   local mesos_version=$1 output_basedir=$2
   local python_outdir=$output_basedir/ubuntu/xenial64/python
   local image_name=ubuntu:xenial
-  local container_name=aurora_${image_name//[:]/_}
 
   pushd "$TMPDIR"
-    init_docker_container ubuntu:xenial
-
-    docker exec -i $container_name bash <<EOF
+    docker run -i -v $(pwd):/mesos-egg $image_name bash <<EOF
       set -e -u
 
       apt-get update
