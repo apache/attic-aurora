@@ -18,7 +18,7 @@ import tempfile
 from io import BytesIO
 
 import pytest
-from twitter.common.contextutil import temporary_file, temporary_file_path, temporary_dir
+from twitter.common.contextutil import temporary_file, temporary_dir
 
 from apache.aurora.config import AuroraConfig
 from apache.aurora.config.loader import AuroraConfigLoader
@@ -100,6 +100,7 @@ def test_load_json_single():
   new_job = AuroraConfigLoader.loads_json(json.dumps(job.get()))['jobs'][0]
   assert new_job == job
 
+
 def test_load_json_memoized():
   env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG_MULTI))
   jobs = env['jobs']
@@ -116,7 +117,8 @@ def test_load_json_memoized():
       fp.close()
       after_overwrite = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
       assert after_overwrite == jobs[0]
-      after_overwrite_no_memozied = AuroraConfigLoader.load_json(fp.name, is_memoized=False)['jobs'][0]
+      after_overwrite_no_memozied = AuroraConfigLoader.load_json(
+        fp.name, is_memoized=False)['jobs'][0]
       assert after_overwrite_no_memozied == jobs[1]
 
 
@@ -139,6 +141,7 @@ def test_load():
       assert 'jobs' in env and len(env['jobs']) == 1
       hello_world = env['jobs'][0]
       assert hello_world.name().get() == 'hello_world'
+
 
 def test_load_with_includes():
   with temporary_dir() as tmp_dir:
@@ -191,7 +194,6 @@ def test_memoized_load():
         assert 'jobs' in env_no_cache and len(env_no_cache['jobs']) == 2
         other_job = env_no_cache['jobs'][1]
         assert other_job.name().get() == 'otherjob'
-
 
 
 def test_pick():

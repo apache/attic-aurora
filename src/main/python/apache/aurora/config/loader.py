@@ -22,8 +22,8 @@ from apache.aurora.config.schema import base as base_schema
 
 class AuroraConfigLoader(PystachioConfig):
   SCHEMA_MODULES = []
-  cached_env = dict()
-  cached_json = dict()
+  CACHED_ENV = dict()
+  CACHED_JSON = dict()
 
   @classmethod
   def assembled_schema(cls, schema_modules):
@@ -60,12 +60,12 @@ class AuroraConfigLoader(PystachioConfig):
   @classmethod
   def load(cls, loadable, is_memoized=False):
     env_key = loadable.name if hasattr(loadable, 'name') else loadable
-    if is_memoized and env_key in cls.cached_env:
-      env = cls.cached_env[env_key]
+    if is_memoized and env_key in cls.CACHED_ENV:
+      env = cls.CACHED_ENV[env_key]
     else:
       env = cls.load_raw(loadable).environment
       if is_memoized:
-        cls.cached_env[env_key] = env
+        cls.CACHED_ENV[env_key] = env
     return env
 
   @classmethod
@@ -74,13 +74,13 @@ class AuroraConfigLoader(PystachioConfig):
 
   @classmethod
   def load_json(cls, filename, is_memoized=False):
-    if is_memoized and filename in cls.cached_json:
-      json = cls.cached_json[filename]
+    if is_memoized and filename in cls.CACHED_JSON:
+      json = cls.CACHED_JSON[filename]
     else:
       with open(filename) as fp:
         json = cls.loads_json(fp.read())
       if is_memoized:
-        cls.cached_json[filename] = json
+        cls.CACHED_JSON[filename] = json
     return json
 
   @classmethod
