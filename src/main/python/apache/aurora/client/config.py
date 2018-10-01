@@ -188,6 +188,7 @@ def get_config(jobname,
                select_role=None,
                select_env=None,
                use_memoized_env=False):
+
   """Creates and returns a config object contained in the provided file."""
   loader = AnnotatedAuroraConfig.load_json if json else AnnotatedAuroraConfig.load
   return loader(config_file,

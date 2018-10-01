@@ -134,7 +134,9 @@ def test_load_json_memoized():
       # verify that value we loaded is the cached value(job[0]) when is_memoized=True
       assert after_overwrite == jobs[0]
       after_overwrite_no_memozied = AuroraConfigLoader.load_json(
-        fp.name, is_memoized=False)['jobs'][0]
+          fp.name,
+          is_memoized=False
+        )['jobs'][0]
       # without memoization, verify that value we load is the uncached value(job[1])
       assert after_overwrite_no_memozied == jobs[1]
 
