@@ -102,23 +102,40 @@ def test_load_json_single():
 
 
 def test_load_json_memoized():
+  """
+  This test reads 2 jobs from the MESOS_CONFIG_MULTI string.
+  It then tests memoization by:
+  1. write job[0] as json to tmp/config.json
+  2. load_json(tmp/config.json, is_memozied=True) to prime the cache
+  3. overwrite tmp/config.json with job[1] as json.
+  4. call load_json(tmp/config.json, is_memoized=True) and verify that job[0] is read
+     (matching the cached version of config.json, not the current version)
+  5. call load_json(tmp/config.json, is_memoized=False) and verify witout memoizaition
+     the new content is read (job[1])
+
+  """
   env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG_MULTI))
   jobs = env['jobs']
 
   with temporary_dir() as d:
     with open(os.path.join(d, 'config.json'), 'w+') as fp:
+      # write job[0] to config.json
       fp.write(json.dumps(jobs[0].get()))
       fp.close()
+      # read job[0] from config.json and set the cached value
       new_job = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
       assert new_job == jobs[0]
 
     with open(os.path.join(d, 'config.json'), 'w+') as fp:
+      # overwrite config.json with job[1]
       fp.write(json.dumps(jobs[1].get()))
       fp.close()
       after_overwrite = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
+      # verify that value we loaded is the cached value(job[0]) when is_memoized=True
       assert after_overwrite == jobs[0]
       after_overwrite_no_memozied = AuroraConfigLoader.load_json(
         fp.name, is_memoized=False)['jobs'][0]
+      # without memoization, verify that value we load is the uncached value(job[1])
       assert after_overwrite_no_memozied == jobs[1]
 
 
