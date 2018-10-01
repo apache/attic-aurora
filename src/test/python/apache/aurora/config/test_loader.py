@@ -13,11 +13,12 @@
 #
 
 import json
+import os
 import tempfile
 from io import BytesIO
 
 import pytest
-from twitter.common.contextutil import temporary_file
+from twitter.common.contextutil import temporary_file, temporary_file_path, temporary_dir
 
 from apache.aurora.config import AuroraConfig
 from apache.aurora.config.loader import AuroraConfigLoader
@@ -32,6 +33,7 @@ HELLO_WORLD = MesosJob(
   name = 'hello_world',
   role = 'john_doe',
   cluster = 'smf1-test',
+  environment = 'devel',
   task = Task(
     name = 'main',
     processes = [Process(name = 'hello_world', cmdline = 'echo {{mesos.instance}}')],
@@ -45,6 +47,7 @@ OTHERJOB = MesosJob(
   name = 'otherjob',
   role = 'john_doe',
   cluster = 'smf1-test',
+  environment = 'devel',
   task = Task(
     name = 'main',
     processes = [Process(name = 'otherthing', cmdline = 'echo {{mesos.instance}}')],
@@ -58,6 +61,11 @@ jobs = [HELLO_WORLD]
 """
 
 MESOS_CONFIG_MULTI = JOB1 + JOB2 + """
+jobs = [HELLO_WORLD, OTHERJOB]
+"""
+
+MESOS_CONFIG_WITH_INCLUDE_TEMPLATE = JOB2 + """
+include("./%s")
 jobs = [HELLO_WORLD, OTHERJOB]
 """
 
@@ -92,6 +100,25 @@ def test_load_json_single():
   new_job = AuroraConfigLoader.loads_json(json.dumps(job.get()))['jobs'][0]
   assert new_job == job
 
+def test_load_json_memoized():
+  env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG_MULTI))
+  jobs = env['jobs']
+
+  with temporary_dir() as d:
+    with open(os.path.join(d, 'config.json'), 'w+') as fp:
+      fp.write(json.dumps(jobs[0].get()))
+      fp.close()
+      new_job = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
+      assert new_job == jobs[0]
+
+    with open(os.path.join(d, 'config.json'), 'w+') as fp:
+      fp.write(json.dumps(jobs[1].get()))
+      fp.close()
+      after_overwrite = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
+      assert after_overwrite == jobs[0]
+      after_overwrite_no_memozied = AuroraConfigLoader.load_json(fp.name, is_memoized=False)['jobs'][0]
+      assert after_overwrite_no_memozied == jobs[1]
+
 
 def test_load_json_multi():
   env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG_MULTI))
@@ -112,6 +139,58 @@ def test_load():
       assert 'jobs' in env and len(env['jobs']) == 1
       hello_world = env['jobs'][0]
       assert hello_world.name().get() == 'hello_world'
+
+def test_load_with_includes():
+  with temporary_dir() as tmp_dir:
+    f1_name = 'f1.aurora'
+    f2_name = 'f2.aurora'
+    with open(os.path.join(tmp_dir, f1_name), 'w+') as f1:
+      f1.write(MESOS_CONFIG)
+      f1.flush()
+      f1.seek(0)
+      with open(os.path.join(tmp_dir, f2_name), 'w+') as f2:
+        f2.write(MESOS_CONFIG_WITH_INCLUDE_TEMPLATE % f1_name)
+        f2.flush()
+        f2.seek(0)
+
+        env = AuroraConfigLoader.load(f2.name, is_memoized=True)
+        assert 'jobs' in env and len(env['jobs']) == 2
+        hello_world = env['jobs'][0]
+        assert hello_world.name().get() == 'hello_world'
+        other_job = env['jobs'][1]
+        assert other_job.name().get() == 'otherjob'
+
+
+def test_cached_load():
+  with temporary_dir() as d:
+    with open(os.path.join(d, 'config.aurora'), 'w+') as fp:
+      fp.write(MESOS_CONFIG)
+      fp.flush()
+      fp.seek(0)
+
+      for config in (fp.name, fp):
+        env = AuroraConfigLoader.load(config, is_memoized=True)
+        assert 'jobs' in env and len(env['jobs']) == 1
+        hello_world = env['jobs'][0]
+        assert hello_world.name().get() == 'hello_world'
+
+    with open(os.path.join(d, 'config.aurora'), 'w+') as fp:
+      fp.write(MESOS_CONFIG_MULTI)
+      fp.flush()
+      fp.seek(0)
+
+      config = fp.name
+      # Verfiy Cached Content is from initial write/read, (1 job)
+      env = AuroraConfigLoader.load(config, is_memoized=True)
+      assert 'jobs' in env and len(env['jobs']) == 1
+      hello_world = env['jobs'][0]
+      assert hello_world.name().get() == 'hello_world'
+
+      # Verfiy uncached content is from second write, (2 jobs)
+      env_no_cache = AuroraConfigLoader.load(config, is_memoized=False)
+      assert 'jobs' in env_no_cache and len(env_no_cache['jobs']) == 2
+      other_job = env_no_cache['jobs'][1]
+      assert other_job.name().get() == 'otherjob'
 
 
 def test_pick():

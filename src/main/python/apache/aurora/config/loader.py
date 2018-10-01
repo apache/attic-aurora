@@ -22,6 +22,8 @@ from apache.aurora.config.schema import base as base_schema
 
 class AuroraConfigLoader(PystachioConfig):
   SCHEMA_MODULES = []
+  cached_env = dict()
+  cached_json = dict()
 
   @classmethod
   def assembled_schema(cls, schema_modules):
@@ -56,17 +58,30 @@ class AuroraConfigLoader(PystachioConfig):
     cls.register_schema(base_schema)
 
   @classmethod
-  def load(cls, loadable):
-    return cls.load_raw(loadable).environment
+  def load(cls, loadable, is_memoized=False):
+    env_key = loadable.name if hasattr(loadable, 'name') else loadable
+    if is_memoized and env_key in cls.cached_env:
+      env = cls.cached_env[env_key]
+    else:
+      env = cls.load_raw(loadable).environment
+      if is_memoized:
+        cls.cached_env[env_key] = env
+    return env
 
   @classmethod
   def load_raw(cls, loadable):
     return cls(loadable)
 
   @classmethod
-  def load_json(cls, filename):
-    with open(filename) as fp:
-      return cls.loads_json(fp.read())
+  def load_json(cls, filename, is_memoized=False):
+    if is_memoized and filename in cls.cached_json:
+      json = cls.cached_json[filename]
+    else:
+      with open(filename) as fp:
+        json = cls.loads_json(fp.read())
+      if is_memoized:
+        cls.cached_json[filename] = json
+    return json
 
   @classmethod
   def loads_json(cls, string):
