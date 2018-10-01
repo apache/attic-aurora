@@ -161,7 +161,7 @@ def test_load_with_includes():
         assert other_job.name().get() == 'otherjob'
 
 
-def test_cached_load():
+def test_memoized_load():
   with temporary_dir() as d:
     with open(os.path.join(d, 'config.aurora'), 'w+') as fp:
       fp.write(MESOS_CONFIG)
@@ -179,18 +179,19 @@ def test_cached_load():
       fp.flush()
       fp.seek(0)
 
-      config = fp.name
-      # Verfiy Cached Content is from initial write/read, (1 job)
-      env = AuroraConfigLoader.load(config, is_memoized=True)
-      assert 'jobs' in env and len(env['jobs']) == 1
-      hello_world = env['jobs'][0]
-      assert hello_world.name().get() == 'hello_world'
+      for config in (fp.name, fp):
+        # Verfiy Cached Content is from initial write/read, (1 job)
+        env = AuroraConfigLoader.load(config, is_memoized=True)
+        assert 'jobs' in env and len(env['jobs']) == 1
+        hello_world = env['jobs'][0]
+        assert hello_world.name().get() == 'hello_world'
 
-      # Verfiy uncached content is from second write, (2 jobs)
-      env_no_cache = AuroraConfigLoader.load(config, is_memoized=False)
-      assert 'jobs' in env_no_cache and len(env_no_cache['jobs']) == 2
-      other_job = env_no_cache['jobs'][1]
-      assert other_job.name().get() == 'otherjob'
+        # Verfiy uncached content is from second write, (2 jobs)
+        env_no_cache = AuroraConfigLoader.load(config, is_memoized=False)
+        assert 'jobs' in env_no_cache and len(env_no_cache['jobs']) == 2
+        other_job = env_no_cache['jobs'][1]
+        assert other_job.name().get() == 'otherjob'
+
 
 
 def test_pick():
