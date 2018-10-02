@@ -61,6 +61,16 @@ class AuroraConfigLoader(PystachioConfig):
 
   @classmethod
   def gen_content_key(cls, loadable):
+    """
+    Generates a key for caching from the loadable
+    if supported.
+
+    Currently only FileExecutor and FilelikeExecutors are
+    supported.
+
+    For other loadables, the key will be None which will
+    skip memoizing and reload the configuration each time.
+    """
     key = None
     if FileExecutor.matches(loadable):
       with open(loadable) as fp:
