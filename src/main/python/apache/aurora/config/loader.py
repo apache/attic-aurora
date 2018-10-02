@@ -14,12 +14,10 @@
 
 import hashlib
 import json
-import os
 import pkgutil
 
 from pystachio.config import Config as PystachioConfig
-from pystachio.compatibility import Compatibility
-
+from pystachio.config import FileExecutor, FilelikeExecutor
 
 from apache.aurora.config.schema import base as base_schema
 
@@ -64,10 +62,10 @@ class AuroraConfigLoader(PystachioConfig):
   @classmethod
   def gen_content_key(cls, loadable):
     key = None
-    if isinstance(loadable, Compatibility.stringy) and os.path.isfile(loadable):
+    if FileExecutor.matches(loadable):
       with open(loadable) as fp:
         key = hashlib.md5(fp.read()).hexdigest()
-    elif hasattr(loadable, 'read') and callable(loadable.read):
+    elif FilelikeExecutor.matches(loadable):
       key = hashlib.md5(loadable.read()).hexdigest()
       loadable.seek(0)
     return key
