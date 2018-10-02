@@ -11,8 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import hashlib
 import json
+import mock
 import os
 import tempfile
 from io import BytesIO
@@ -69,6 +70,9 @@ include("./%s")
 jobs = [HELLO_WORLD, OTHERJOB]
 """
 
+MESOS_CONFIG_MD5 = hashlib.md5(MESOS_CONFIG).hexdigest()
+
+
 
 def test_enoent():
   nonexistent_file = tempfile.mktemp()
@@ -101,44 +105,47 @@ def test_load_json_single():
   assert new_job == job
 
 
-def test_load_json_memoized():
-  """
-  This test reads 2 jobs from the MESOS_CONFIG_MULTI string.
-  It then tests memoization by:
-  1. write job[0] as json to tmp/config.json
-  2. load_json(tmp/config.json, is_memozied=True) to prime the cache
-  3. overwrite tmp/config.json with job[1] as json.
-  4. call load_json(tmp/config.json, is_memoized=True) and verify that job[0] is read
-     (matching the cached version of config.json, not the current version)
-  5. call load_json(tmp/config.json, is_memoized=False) and verify witout memoizaition
-     the new content is read (job[1])
+def test_gen_content_key():
+  content = "one two three"
+  expected_md5 = hashlib.md5(content).hexdigest()
 
-  """
-  env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG_MULTI))
-  jobs = env['jobs']
+  assert AuroraConfigLoader.gen_content_key(1) is None, (
+    "Non filetype results in None")
 
   with temporary_dir() as d:
-    with open(os.path.join(d, 'config.json'), 'w+') as fp:
-      # write job[0] to config.json
+    filename = os.path.join(d, 'file')
+    assert AuroraConfigLoader.gen_content_key(filename) is None, (
+      "non existant file results in key=None")
+
+    with open(filename, 'w+') as fp:
+      fp.write(content)
+      fp.flush()
+      fp.seek(0)
+      for config in (fp.name, fp):
+        assert expected_md5 == AuroraConfigLoader.gen_content_key(config), (
+          "check hexdigest for %s" % config)
+
+
+def test_load_json_memoized():
+  AuroraConfigLoader.CACHED_JSON = {}
+  env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG_MULTI))
+  jobs = env['jobs']
+  content = json.dumps(jobs[0].get())
+  expected_md5 = hashlib.md5(content).hexdigest()
+  with temporary_dir() as d:
+    filename = os.path.join(d, 'config.json')
+    with open(filename, 'w+') as fp:
       fp.write(json.dumps(jobs[0].get()))
       fp.close()
-      # read job[0] from config.json and set the cached value
-      new_job = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
-      assert new_job == jobs[0]
+      loaded_job = AuroraConfigLoader.load_json(fp.name, is_memoized=False)['jobs'][0]
+      assert loaded_job == jobs[0]
+      assert expected_md5 not in AuroraConfigLoader.CACHED_JSON, (
+        "No key is cached when is_memoized=False")
 
-    with open(os.path.join(d, 'config.json'), 'w+') as fp:
-      # overwrite config.json with job[1]
-      fp.write(json.dumps(jobs[1].get()))
-      fp.close()
-      after_overwrite = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
-      # verify that value we loaded is the cached value(job[0]) when is_memoized=True
-      assert after_overwrite == jobs[0]
-      after_overwrite_no_memozied = AuroraConfigLoader.load_json(
-          fp.name,
-          is_memoized=False
-        )['jobs'][0]
-      # without memoization, verify that value we load is the uncached value(job[1])
-      assert after_overwrite_no_memozied == jobs[1]
+      loaded_job = AuroraConfigLoader.load_json(fp.name, is_memoized=True)['jobs'][0]
+      assert loaded_job == jobs[0]
+      assert expected_md5 in AuroraConfigLoader.CACHED_JSON, (
+        "Key is cached when is_memoized=True")
 
 
 def test_load_json_multi():
@@ -183,7 +190,24 @@ def test_load_with_includes():
         assert other_job.name().get() == 'otherjob'
 
 
+@mock.patch('apache.aurora.config.loader.AuroraConfigLoader.gen_content_key')
+def test_memoized_load_cache_hit(mock_gen_content_key):
+  expected_env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG))
+  mock_gen_content_key.return_value = MESOS_CONFIG_MD5
+  AuroraConfigLoader.CACHED_ENV = {MESOS_CONFIG_MD5: expected_env }
+  loaded_env = AuroraConfigLoader.load('a/path', is_memoized=True)
+  assert loaded_env == expected_env, "Test cache hit"
+
+
 def test_memoized_load():
+  AuroraConfigLoader.CACHED_ENV = {}
+  def check_env(env, config):
+    assert 'jobs' in env and len(env['jobs']) == 1, (
+      "Match expected jobs for config=%s, memoized=%s" % (
+        config, is_memoized)
+    )
+    assert env['jobs'][0].name().get() == 'hello_world'
+
   with temporary_dir() as d:
     with open(os.path.join(d, 'config.aurora'), 'w+') as fp:
       fp.write(MESOS_CONFIG)
@@ -191,28 +215,17 @@ def test_memoized_load():
       fp.seek(0)
 
       for config in (fp.name, fp):
+        AuroraConfigLoader.CACHED_ENV = {}
+        env = AuroraConfigLoader.load(config, is_memoized=False)
+        check_env(env, config)
+        assert MESOS_CONFIG_MD5 not in AuroraConfigLoader.CACHED_ENV.keys(), (
+          "No key is cached when config=%s and is_memoized=False")
+
+        fp.seek(0) #previous load results in filepointer at eof
         env = AuroraConfigLoader.load(config, is_memoized=True)
-        assert 'jobs' in env and len(env['jobs']) == 1
-        hello_world = env['jobs'][0]
-        assert hello_world.name().get() == 'hello_world'
-
-    with open(os.path.join(d, 'config.aurora'), 'w+') as fp:
-      fp.write(MESOS_CONFIG_MULTI)
-      fp.flush()
-      fp.seek(0)
-
-      for config in (fp.name, fp):
-        # Verfiy Cached Content is from initial write/read, (1 job)
-        env = AuroraConfigLoader.load(config, is_memoized=True)
-        assert 'jobs' in env and len(env['jobs']) == 1
-        hello_world = env['jobs'][0]
-        assert hello_world.name().get() == 'hello_world'
-
-        # Verfiy uncached content is from second write, (2 jobs)
-        env_no_cache = AuroraConfigLoader.load(config, is_memoized=False)
-        assert 'jobs' in env_no_cache and len(env_no_cache['jobs']) == 2
-        other_job = env_no_cache['jobs'][1]
-        assert other_job.name().get() == 'otherjob'
+        check_env(env, config)
+        assert MESOS_CONFIG_MD5 in AuroraConfigLoader.CACHED_ENV.keys(), (
+          "Key is cached when config=%s and is_memoized=True" % config)
 
 
 def test_pick():

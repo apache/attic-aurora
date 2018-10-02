@@ -12,10 +12,14 @@
 # limitations under the License.
 #
 
+import hashlib
 import json
+import os
 import pkgutil
 
 from pystachio.config import Config as PystachioConfig
+from pystachio.compatibility import Compatibility
+
 
 from apache.aurora.config.schema import base as base_schema
 
@@ -58,14 +62,28 @@ class AuroraConfigLoader(PystachioConfig):
     cls.register_schema(base_schema)
 
   @classmethod
+  def gen_content_key(cls, loadable):
+    key = None
+    if isinstance(loadable, Compatibility.stringy) and os.path.isfile(loadable):
+      with open(loadable) as fp:
+        key = hashlib.md5(fp.read()).hexdigest()
+    elif hasattr(loadable, 'read') and callable(loadable.read):
+      key = hashlib.md5(loadable.read()).hexdigest()
+      loadable.seek(0)
+    return key
+
+  @classmethod
   def load(cls, loadable, is_memoized=False):
-    env_key = loadable.name if hasattr(loadable, 'name') else loadable
-    if is_memoized and env_key in cls.CACHED_ENV:
-      env = cls.CACHED_ENV[env_key]
+    if is_memoized:
+      env_key = cls.gen_content_key(loadable)
+      if env_key and env_key in cls.CACHED_ENV:
+        env = cls.CACHED_ENV[env_key]
+      else:
+        env = cls.load_raw(loadable).environment
+        if env_key is not None:
+          cls.CACHED_ENV[env_key] = env
     else:
       env = cls.load_raw(loadable).environment
-      if is_memoized:
-        cls.CACHED_ENV[env_key] = env
     return env
 
   @classmethod
@@ -74,13 +92,18 @@ class AuroraConfigLoader(PystachioConfig):
 
   @classmethod
   def load_json(cls, filename, is_memoized=False):
-    if is_memoized and filename in cls.CACHED_JSON:
-      json = cls.CACHED_JSON[filename]
+    if is_memoized:
+      env_key = cls.gen_content_key(filename)
+      if env_key and env_key in cls.CACHED_JSON:
+        json = cls.CACHED_JSON[env_key]
+      else:
+        with open(filename) as fp:
+          json = cls.loads_json(fp.read())
+        if env_key is not None:
+          cls.CACHED_JSON[env_key] = json
     else:
       with open(filename) as fp:
         json = cls.loads_json(fp.read())
-      if is_memoized:
-        cls.CACHED_JSON[filename] = json
     return json
 
   @classmethod
