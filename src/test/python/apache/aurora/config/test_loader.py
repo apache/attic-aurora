@@ -73,7 +73,6 @@ jobs = [HELLO_WORLD, OTHERJOB]
 MESOS_CONFIG_MD5 = hashlib.md5(MESOS_CONFIG).hexdigest()
 
 
-
 def test_enoent():
   nonexistent_file = tempfile.mktemp()
   with pytest.raises(AuroraConfigLoader.NotFound):
@@ -194,7 +193,7 @@ def test_load_with_includes():
 def test_memoized_load_cache_hit(mock_gen_content_key):
   expected_env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG))
   mock_gen_content_key.return_value = MESOS_CONFIG_MD5
-  AuroraConfigLoader.CACHED_ENV = {MESOS_CONFIG_MD5: expected_env }
+  AuroraConfigLoader.CACHED_ENV = {MESOS_CONFIG_MD5: expected_env}
   loaded_env = AuroraConfigLoader.load('a/path', is_memoized=True)
   assert loaded_env == expected_env, "Test cache hit"
 
@@ -203,9 +202,7 @@ def test_memoized_load():
   AuroraConfigLoader.CACHED_ENV = {}
   def check_env(env, config):
     assert 'jobs' in env and len(env['jobs']) == 1, (
-      "Match expected jobs for config=%s, memoized=%s" % (
-        config, is_memoized)
-    )
+      "Match expected jobs for config=%s" % config)
     assert env['jobs'][0].name().get() == 'hello_world'
 
   with temporary_dir() as d:
@@ -221,7 +218,7 @@ def test_memoized_load():
         assert MESOS_CONFIG_MD5 not in AuroraConfigLoader.CACHED_ENV.keys(), (
           "No key is cached when config=%s and is_memoized=False")
 
-        fp.seek(0) #previous load results in filepointer at eof
+        fp.seek(0)  # previous load results in filepointer at eof
         env = AuroraConfigLoader.load(config, is_memoized=True)
         check_env(env, config)
         assert MESOS_CONFIG_MD5 in AuroraConfigLoader.CACHED_ENV.keys(), (
