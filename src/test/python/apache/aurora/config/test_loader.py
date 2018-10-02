@@ -125,6 +125,16 @@ def test_gen_content_key():
           "check hexdigest for %s" % config)
 
 
+@mock.patch('apache.aurora.config.loader.AuroraConfigLoader.gen_content_key')
+def test_memoized_load_json_cache_hit(mock_gen_content_key):
+  expected_env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG))
+  expected_job_json = json.dumps(expected_env['jobs'][0].get())
+  mock_gen_content_key.return_value = MESOS_CONFIG_MD5
+  AuroraConfigLoader.CACHED_JSON = {MESOS_CONFIG_MD5: expected_job_json}
+  loaded_job_json = AuroraConfigLoader.load_json('a/path', is_memoized=True)
+  assert loaded_job_json == expected_job_json, "Test cache hit load_json"
+
+
 def test_load_json_memoized():
   AuroraConfigLoader.CACHED_JSON = {}
   env = AuroraConfigLoader.load(BytesIO(MESOS_CONFIG_MULTI))
