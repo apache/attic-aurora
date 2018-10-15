@@ -166,7 +166,7 @@ build_centos6() {
     yum -y install centos-release-scl-rh
     yum -y install ${CENTOS6_X86_64_DEPENDENCIES[*]}
 
-    # Mesos requires gcc 4.8, which is available in devtools-7 on centos 6.
+    # Mesos requires gcc 4.8+, which is available in devtools-7 on centos 6.
     scl enable devtoolset-7 bash
     scl enable python27 - <<EOS
         $(fetch_and_build_mesos "$mesos_version")
