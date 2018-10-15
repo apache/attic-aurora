@@ -158,7 +158,7 @@ build_centos6() {
   local image_name=centos:6
 
   pushd "$TMPDIR"
-    docker run -m=2g -i -v $(pwd):/mesos-egg $image_name bash <<EOF
+    docker run -i -v $(pwd):/mesos-egg $image_name bash <<EOF
     set -e -u
 
     # We need Software Collections for Python 2.7 (we dropped support for 2.6).
