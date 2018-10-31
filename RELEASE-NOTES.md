@@ -2,6 +2,7 @@
 ======
 
 ### New/updated:
+- Updated to Mesos 1.6.1.
 - New update strategy added: Variable Batch Update. With this strategy, a job may be updated in
   in batches of different sizes. For example, an update which modifies a total of 10 instances may
   be done in batch sizes of 2, 3, and 5. The number of updated instances must equal the size of the
@@ -13,8 +14,7 @@
   or a `VariableBatchUpdateStrategy` object. `QueueUpdateStrategy` and `BatchUpdateStrategy` take
   a single integer argument while `VariableBatchUpdateStrategy` takes a list of positive integers
   as an argument.
-- Updated to Mesos 1.6.1
-  
+
 ### Deprecations and removals:
 
 - Deprecated use of Thrift fields `JobUpdateSettings.waitForBatchCompletion` and
