@@ -343,6 +343,12 @@ public class ConfigurationManager {
       throw new TaskDescriptionException("Tier contains illegal characters: " + config.getTier());
     }
 
+    if (!config.isSetTier()) {
+      String defaultTierName = tierManager.getDefaultTierName();
+      builder.setTier(defaultTierName);
+      builder.setProduction(tierManager.getTiers().get(defaultTierName).isProduction());
+    }
+
     try {
       tierManager.getTier(config);
     } catch (IllegalArgumentException e) {
