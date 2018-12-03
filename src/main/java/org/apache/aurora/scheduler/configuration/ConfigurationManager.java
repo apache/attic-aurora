@@ -36,7 +36,6 @@ import org.apache.aurora.gen.PercentageSlaPolicy;
 import org.apache.aurora.gen.SlaPolicy;
 import org.apache.aurora.gen.TaskConfig;
 import org.apache.aurora.gen.TaskConstraint;
-import org.apache.aurora.scheduler.TierInfo;
 import org.apache.aurora.scheduler.TierManager;
 import org.apache.aurora.scheduler.base.JobKeys;
 import org.apache.aurora.scheduler.base.UserProvidedStrings;
@@ -351,8 +350,8 @@ public class ConfigurationManager {
     }
 
     try {
-      TierInfo tierInfo = tierManager.getTier(config);
-      builder.setProduction(tierInfo.isProduction());
+      // Explicitly set the production field as it is used for Quota calculations.
+      builder.setProduction(tierManager.getTier(config).isProduction());
     } catch (IllegalArgumentException e) {
       throw new TaskDescriptionException(e.getMessage(), e);
     }
