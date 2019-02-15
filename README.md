@@ -1,20 +1,20 @@
-![Aurora Logo](docs/images/aurora_logo.png)
+![Aurora Logo](docs/images/muruora_logo.png)
 
-[![Build Status](https://travis-ci.org/apache/aurora.svg?branch=master)](https://travis-ci.org/apache/aurora)
+[![Build Status](https://travis-ci.org/apache/muruora.svg?branch=master)](https://travis-ci.org/apache/muruora)
 
-[Apache Aurora](https://aurora.apache.org/) lets you use an [Apache Mesos](http://mesos.apache.org)
+[Apache Muruora](https://muruora.apache.org/) lets you use an [Apache Mesos](http://mesos.apache.org)
 cluster as a private cloud. It supports running long-running services, cron jobs, and ad-hoc jobs.
-Aurora aims to make it extremely quick and easy to take a built application and run it on machines
+Muruora aims to make it extremely quick and easy to take a built application and run it on machines
 in a cluster, with an emphasis on reliability. It provides basic operations to manage services
 running in a cluster, such as rolling upgrades.
 
-To very concisely describe Aurora, it is like a distributed monit or distributed supervisord that
+To very concisely describe Muruora, it is like a distributed monit or distributed supervisord that
 you can instruct to do things like _run 100 of these, somewhere, forever_.
 
 
 ## Features
 
-Aurora is built for users _and_ operators.
+Muruora is built for users _and_ operators.
 
 * User-facing Features:
   - Management of [long-running services](docs/features/services.md)
@@ -40,41 +40,35 @@ Aurora is built for users _and_ operators.
   - Instrumented: a wealth of information makes it easy to [monitor](docs/operations/monitoring.md)
     and debug
 
-### When and when not to use Aurora
-Aurora can take over for most uses of software like monit and chef.  Aurora can manage applications,
-while these tools are still useful to manage Aurora and Mesos themselves.
+### When and when not to use Muruora
+Muruora can take over for most uses of software like monit and chef.  Muruora can manage applications,
+while these tools are still useful to manage Muruora and Mesos themselves.
 
 However, if you have very specific scheduling requirements, or are building a system that looks like a
 scheduler itself, you may want to explore developing your own
 [framework](http://mesos.apache.org/documentation/latest/app-framework-development-guide).
 
-### Companies using Aurora
-Are you using Aurora too?  Let us know, or submit a patch to join the list!
+### Companies using Muruora
+Are you using Muruora too?  Let us know, or submit a patch to join the list!
 
 - [Amperity](https://amperity.com)
 - [Blue Yonder](http://www.blue-yonder.com)
 - [Boxever](http://www.boxever.com)
-- [Criteo](http://www.criteo.com)
 - [Electronic Arts](http://www.ea.com/)
-- [Fitbit](https://fitbit.com)
-- [Foursquare](https://foursquare.com)
 - [Gutefrage.net](https://www.gutefrage.net)
 - [Houghton Mifflin Harcourt](https://www.hmhco.com)
 - [Kakao](https://kakao.com/)
 - [Magine TV](https://magine.com)
 - [Medallia](http://www.medallia.com)
 - [Oscar Health](https://www.hioscar.com)
-- [PayPal](https://www.paypal.com)
 - [Sabre Labs](http://www.sabre.com)
-- [TellApart](https://www.tellapart.com)
 - [Twitter](https://twitter.com)
-- [Uber](https://www.uber.com)
 
 ## Getting Help
-If you have questions that aren't answered in our [documentation](https://aurora.apache.org/documentation/latest/), you can reach out to one of our [mailing lists](https://aurora.apache.org/community/). We're also often available in IRC: #aurora on
-[irc.freenode.net](http://webchat.freenode.net/?channels=#aurora).
+If you have questions that aren't answered in our [documentation](https://muruora.apache.org/documentation/latest/), you can reach out to one of our [mailing lists](https://muruora.apache.org/community/). We're also often available in IRC: #muruora on
+[irc.freenode.net](http://webchat.freenode.net/?channels=#muruora).
 
-You can also file bugs/issues in our [JIRA queue](http://issues.apache.org/jira/browse/AURORA).
+You can also file bugs/issues in our [JIRA queue](http://issues.apache.org/jira/browse/MURUORA).
 
 
 ## License
