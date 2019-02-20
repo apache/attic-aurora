@@ -54,7 +54,7 @@ CWD = os.environ.get('MESOS_SANDBOX', '.')
 
 app.configure(debug=True)
 LogOptions.set_simple(True)
-LogOptions.set_disk_log_level('DEBUG')
+LogOptions.set_disk_log_level('INFO')
 LogOptions.set_log_dir(CWD)
 
 
@@ -181,6 +181,14 @@ app.add_option(
     dest='runner_rotate_log_backups',
     type=int,
     help='Maximum number of rotated stdout/stderr logs emitted by the thermos runner.')
+
+
+app.add_option(
+    '--disk-log-level',
+    dest='disk_log_level',
+    type=str,
+    default='INFO',
+    help='Disk Log Level DEBUG/INFO.')
 
 
 app.add_option(

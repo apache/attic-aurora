@@ -54,7 +54,7 @@ from thrift.TSerialization import serialize as thrift_serialize
 random.seed(%(random_seed)d)
 
 log.init('runner_base')
-LogOptions.set_disk_log_level('DEBUG')
+LogOptions.set_disk_log_level('INFO')
 
 task = ThermosConfigLoader.load_json('%(filename)s')
 task = task.tasks()[0].task

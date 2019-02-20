@@ -306,7 +306,7 @@ class TestThermosExecutor(object):
   def setup_class(cls):
     cls.LOG_DIR = tempfile.mkdtemp()
     LogOptions.set_log_dir(cls.LOG_DIR)
-    LogOptions.set_disk_log_level('DEBUG')
+    LogOptions.set_disk_log_level('INFO')
     log.init('executor_logger')
 
   @classmethod

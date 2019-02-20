@@ -267,7 +267,7 @@ def main(args, opts):
 
 
 LogOptions.set_simple(True)
-LogOptions.set_disk_log_level('DEBUG')
+LogOptions.set_disk_log_level('INFO')
 
 app.register_module(ExceptionTerminationHandler())
 app.main()
