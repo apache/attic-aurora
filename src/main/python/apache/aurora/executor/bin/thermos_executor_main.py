@@ -54,7 +54,7 @@ CWD = os.environ.get('MESOS_SANDBOX', '.')
 
 app.configure(debug=True)
 LogOptions.set_simple(True)
-LogOptions.set_disk_log_level('INFO')
+LogOptions.set_disk_log_level('DEBUG')
 LogOptions.set_log_dir(CWD)
 
 
@@ -187,8 +187,8 @@ app.add_option(
     '--disk-log-level',
     dest='disk_log_level',
     type=str,
-    default='INFO',
-    help='Disk Log Level DEBUG/INFO.')
+    default='DEBUG',
+    help='Disk Log Level DEBUG/INFO/WARN/FATAL/ERROR.')
 
 
 app.add_option(
@@ -234,6 +234,8 @@ class UserOverrideDirectorySandboxProvider(DefaultSandboxProvider):
 def initialize(options):
   cwd_path = os.path.abspath(CWD)
   checkpoint_root = os.path.join(cwd_path, MesosPathDetector.DEFAULT_SANDBOX_PATH)
+
+  LogOptions.set_disk_log_level(options.disk_log_level)
 
   # status providers:
   status_providers = [
