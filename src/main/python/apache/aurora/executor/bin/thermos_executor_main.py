@@ -184,14 +184,6 @@ app.add_option(
 
 
 app.add_option(
-    '--disk-log-level',
-    dest='disk_log_level',
-    type=str,
-    default='DEBUG',
-    help='Disk Log Level DEBUG/INFO/WARN/FATAL/ERROR.')
-
-
-app.add_option(
      "--preserve_env",
      dest="preserve_env",
      default=False,

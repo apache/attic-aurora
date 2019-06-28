@@ -66,7 +66,7 @@ class TestThermosTaskRunnerIntegration(object):
   def setup_class(cls):
     cls.LOG_DIR = tempfile.mkdtemp()
     LogOptions.set_log_dir(cls.LOG_DIR)
-    LogOptions.set_disk_log_level('INFO')
+    LogOptions.set_disk_log_level('DEBUG')
     log.init('executor_logger')
     if not cls.PEX_PATH:
       pex_dir = tempfile.mkdtemp()
