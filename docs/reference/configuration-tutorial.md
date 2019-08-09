@@ -253,14 +253,14 @@ An example for this Process is:
 
     setup_env = Process(
       name = 'setup'
-      cmdline = '''cat <<EOF > .thermos_profile
-                   export RESULT=hello
-                   EOF'''
+      cmdline = "echo '{0}' > .thermos_profile".format(
+        "\n".join(["export RESULT='hello'", "export NAME='May'"])
+      )
     )
 
     read_env = Process(
       name = 'read'
-      cmdline = 'echo $RESULT'
+      cmdline = 'echo $RESULT $NAME'
     )
 
 ## Defining Task Objects
