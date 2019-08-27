@@ -252,10 +252,12 @@ You can utilize this process to pass environment variables to the sandbox.
 An example for this Process is:
 
     setup_env = Process(
-      name = 'setup'
-      cmdline = "echo '{0}' > .thermos_profile".format(
-        "\n".join(["export RESULT='hello'", "export NAME='May'"])
-      )
+        name = 'setup',
+        cmdline = (
+            'cat <<EOF > .thermos_profile\n'
+            'export RESULT=hello\n'
+            'EOF\n'
+        )
     )
 
     read_env = Process(
