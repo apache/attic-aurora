@@ -262,7 +262,7 @@ An example for this Process is:
 
     read_env = Process(
       name = 'read'
-      cmdline = 'echo $RESULT $NAME'
+      cmdline = 'echo $RESULT'
     )
 
 ## Defining Task Objects
