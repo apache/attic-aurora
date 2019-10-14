@@ -336,7 +336,7 @@ public class ConfigurationManagerTest {
                     MIN_REQUIRED_INSTANCES,
                     MAX_SLA_DURATION_SECS,
                     ".+",
-                false),
+                    false),
             TaskTestUtil.TIER_MANAGER,
             TaskTestUtil.THRIFT_BACKFILL,
             TestExecutorSettings.THERMOS_EXECUTOR)
