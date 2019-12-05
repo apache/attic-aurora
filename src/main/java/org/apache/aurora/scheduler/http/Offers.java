@@ -45,7 +45,7 @@ public class Offers {
     this.offerManager = Objects.requireNonNull(offerManager);
     mapper = new ObjectMapper()
         .registerModule(new ProtobufModule())
-        .setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES)
+        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
         .setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 

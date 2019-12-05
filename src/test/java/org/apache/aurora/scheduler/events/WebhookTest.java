@@ -13,6 +13,7 @@
  */
 package org.apache.aurora.scheduler.events;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -38,7 +39,6 @@ import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.HttpResponseBodyPart;
-import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.channel.DefaultKeepAliveStrategy;
@@ -135,7 +135,7 @@ public class WebhookTest {
     }
 
     @Override
-    public State onHeadersReceived(HttpResponseHeaders headers) throws Exception {
+    public State onHeadersReceived(HttpHeaders headers) throws Exception {
       return handler.onHeadersReceived(headers);
     }
 

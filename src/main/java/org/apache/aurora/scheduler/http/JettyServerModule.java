@@ -73,10 +73,11 @@ import org.apache.aurora.scheduler.thrift.ThriftModule;
 import org.apache.aurora.scheduler.thrift.aop.AopModule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.rewrite.handler.RewriteRegexRule;
+import org.eclipse.jetty.server.CustomRequestLog;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.Slf4jRequestLog;
+import org.eclipse.jetty.server.Slf4jRequestLogWriter;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
@@ -386,7 +387,9 @@ public class JettyServerModule extends AbstractModule {
       HandlerCollection rootHandler = new HandlerList();
 
       RequestLogHandler logHandler = new RequestLogHandler();
-      logHandler.setRequestLog(new Slf4jRequestLog());
+      logHandler.setRequestLog(
+          new CustomRequestLog(
+              new Slf4jRequestLogWriter(), CustomRequestLog.EXTENDED_NCSA_FORMAT));
 
       rootHandler.addHandler(logHandler);
       rootHandler.addHandler(servletHandler);
