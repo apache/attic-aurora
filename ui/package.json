@@ -45,7 +45,8 @@
     "sassjs-loader": "^1.0.0",
     "style-loader": "^0.18.2",
     "url-loader": "^0.6.2",
-    "webpack": "^4.41.5"
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10"
   },
   "jest": {
     "moduleDirectories": [
