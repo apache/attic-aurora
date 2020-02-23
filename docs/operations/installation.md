@@ -106,7 +106,7 @@ Now initialize the database:
 
 Now you can start the scheduler back up.
 Ubuntu: `sudo start aurora-scheduler`
-CentOS: `sudo systemctl start aurora`
+CentOS: `sudo systemctl start aurora-scheduler`
 
 
 ## Installing worker components
