@@ -36,6 +36,8 @@ import org.apache.aurora.gen.PercentageSlaPolicy;
 import org.apache.aurora.gen.SlaPolicy;
 import org.apache.aurora.gen.TaskConfig;
 import org.apache.aurora.gen.TaskConstraint;
+import org.apache.aurora.gen.VolumeSource;
+import org.apache.aurora.gen.VolumeType;
 import org.apache.aurora.scheduler.TierManager;
 import org.apache.aurora.scheduler.base.JobKeys;
 import org.apache.aurora.scheduler.base.UserProvidedStrings;
@@ -478,6 +480,18 @@ public class ConfigurationManager {
       IMesosContainer container = config.getContainer().getMesos();
       if (!settings.allowContainerVolumes && !container.getVolumes().isEmpty()) {
         throw new TaskDescriptionException(NO_CONTAINER_VOLUMES);
+      }
+
+      if (settings.allowContainerVolumes  && !container.getVolumes().isEmpty()) {
+        builder.setContainer(Container.mesos(
+            container.newBuilder()
+                .setVolumes(container.getVolumes().stream()
+                    .map(v -> v.isSetVolumeType() ? v.newBuilder() : v.newBuilder()
+                        .setContainerPath(v.getContainerPath())
+                        .setMode(v.getMode())
+                        .setSource(VolumeSource.hostPath(v.getHostPath()))
+                        .setVolumeType(VolumeType.HOST_PATH))
+                    .collect(Collectors.toList()))));
       }
     }
 

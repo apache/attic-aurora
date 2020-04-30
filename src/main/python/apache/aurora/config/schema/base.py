@@ -22,6 +22,7 @@ from apache.thermos.config.schema import *
 from gen.apache.aurora.api.constants import AURORA_EXECUTOR_NAME
 
 
+
 # TODO(wickman) Bind {{mesos.instance}} to %shard_id%
 class MesosContext(Struct):
   # The instance id (i.e. replica id, shard id) in the context of a task
@@ -156,10 +157,28 @@ class DockerImage(Struct):
 
 Mode = Enum('RO', 'RW')
 
+
+class HostPath(Struct):
+  path = Required(String)
+
+
+class FileSecret(Struct):
+  name = Required(String)
+  key = String
+
+
+class DockerVolume(Struct):
+  driver = Required(String)
+  name = Required(String)
+  options = Default(List(Parameter), [])
+
+
 class Volume(Struct):
   container_path = Required(String)
-  host_path = Required(String)
+  host_path = String
   mode = Required(Mode)
+  source = Choice([FileSecret, DockerVolume, HostPath])
+
 
 class Mesos(Struct):
   image = Choice([AppcImage, DockerImage])

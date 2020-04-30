@@ -17,16 +17,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 
 import org.apache.aurora.Protobufs;
 import org.apache.aurora.codec.ThriftBinaryCodec;
+import org.apache.aurora.gen.VolumeType;
 import org.apache.aurora.scheduler.base.JobKeys;
 import org.apache.aurora.scheduler.base.SchedulerException;
 import org.apache.aurora.scheduler.base.Tasks;
@@ -44,6 +45,7 @@ import org.apache.aurora.scheduler.storage.entities.IMesosContainer;
 import org.apache.aurora.scheduler.storage.entities.IMesosFetcherURI;
 import org.apache.aurora.scheduler.storage.entities.IServerInfo;
 import org.apache.aurora.scheduler.storage.entities.ITaskConfig;
+import org.apache.aurora.scheduler.storage.entities.IVolume;
 import org.apache.mesos.v1.Protos;
 import org.apache.mesos.v1.Protos.CommandInfo;
 import org.apache.mesos.v1.Protos.CommandInfo.URI.Builder;
@@ -172,7 +174,9 @@ public interface MesosTaskFactory {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
             "Setting task resources to {}",
-            Iterables.transform(resources, Protobufs::toString));
+            StreamSupport.stream(resources.spliterator(), false)
+                .map(Protobufs::toString)
+                .collect(Collectors.toList()));
       }
 
       TaskInfo.Builder taskBuilder = TaskInfo.newBuilder()
@@ -252,12 +256,9 @@ public interface MesosTaskFactory {
         ContainerInfo.MesosInfo.Builder mesosContainerBuilder =
             ContainerInfo.MesosInfo.newBuilder();
 
-        Iterable<Protos.Volume> containerVolumes = Iterables.transform(mesosContainer.getVolumes(),
-            input -> Protos.Volume.newBuilder()
-            .setMode(Protos.Volume.Mode.valueOf(input.getMode().name()))
-            .setHostPath(input.getHostPath())
-            .setContainerPath(input.getContainerPath())
-            .build());
+        Iterable<Protos.Volume> containerVolumes = mesosContainer.getVolumes().stream()
+            .map(v -> getContainerVolume(v))
+            .collect(Collectors.toList());
 
         Protos.Volume volume = Protos.Volume.newBuilder()
             .setImage(imageBuilder)
@@ -276,13 +277,77 @@ public interface MesosTaskFactory {
       return Optional.empty();
     }
 
+    private Protos.Volume getContainerVolume(IVolume volume) {
+      requireNonNull(volume);
+
+      if (volume.getHostPath() == null && volume.isSetVolumeType()) {
+        if (volume.getVolumeType() == VolumeType.HOST_PATH) {
+          return Protos.Volume.newBuilder()
+              .setMode(Protos.Volume.Mode.valueOf(volume.getMode().name()))
+              .setHostPath(volume.getSource().getHostPath())
+              .setContainerPath(volume.getContainerPath())
+              .build();
+        } else if (volume.getVolumeType() == VolumeType.DOCKER_VOLUME) {
+          Iterable<Protos.Parameter> options = volume.getSource().getDocker().getOptions().stream()
+              .map(item -> Protos.Parameter.newBuilder()
+                  .setKey(item.getName())
+                  .setValue(item.getValue()).build())
+              .collect(Collectors.toList());
+
+          return Protos.Volume.newBuilder()
+              .setMode(Protos.Volume.Mode.valueOf(volume.getMode().name()))
+              .setSource(Protos.Volume.Source.newBuilder()
+                  .setDockerVolume(Protos.Volume.Source.DockerVolume.newBuilder()
+                      .setDriver(volume.getSource().getDocker().getDriver())
+                      .setName(volume.getSource().getDocker().getName())
+                      .setDriverOptions(Protos.Parameters.newBuilder()
+                          .addAllParameter(options))
+                      .build())
+                  .setType(Protos.Volume.Source.Type.DOCKER_VOLUME)
+                  .build())
+              .setContainerPath(volume.getContainerPath())
+              .build();
+
+        } else if (volume.getVolumeType() == VolumeType.FILE_SECRET) {
+          Protos.Secret.Reference.Builder reference = Protos.Secret.Reference.newBuilder();
+          reference.setName(volume.getSource().getFileSecret().getName());
+          if (volume.getSource().getFileSecret().isSetKey()) {
+            reference.setKey(volume.getSource().getFileSecret().getKey());
+          }
+
+          return Protos.Volume.newBuilder()
+              .setMode(Protos.Volume.Mode.valueOf(volume.getMode().name()))
+              .setSource(Protos.Volume.Source.newBuilder()
+                  .setSecret(Protos.Secret.newBuilder()
+                      .setReference(reference.build())
+                      .setType(Protos.Secret.Type.REFERENCE)
+                      .build())
+                  .setType(Protos.Volume.Source.Type.SECRET)
+                  .build())
+              .setContainerPath(volume.getContainerPath())
+              .build();
+
+        }
+        throw new SchedulerException("Task had no supported volume set.");
+      }
+
+      return Protos.Volume.newBuilder()
+          .setMode(Protos.Volume.Mode.valueOf(volume.getMode().name()))
+          .setHostPath(volume.getHostPath())
+          .setContainerPath(volume.getContainerPath())
+          .build();
+    }
+
     private ContainerInfo getDockerContainerInfo(
         IDockerContainer config,
         Optional<String> executorName) {
 
-      Iterable<Protos.Parameter> parameters = Iterables.transform(config.getParameters(),
-          item -> Protos.Parameter.newBuilder().setKey(item.getName())
-            .setValue(item.getValue()).build());
+      Iterable<Protos.Parameter> parameters = config.getParameters().stream()
+          .map(item -> Protos.Parameter.newBuilder()
+              .setKey(item.getName())
+              .setValue(item.getValue())
+              .build())
+          .collect(Collectors.toList());
 
       ContainerInfo.DockerInfo.Builder dockerBuilder = ContainerInfo.DockerInfo.newBuilder()
           .setImage(config.getImage()).addAllParameters(parameters);
@@ -341,7 +406,9 @@ public interface MesosTaskFactory {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
             "Setting executor resources to {}",
-            Iterables.transform(executorResources, Protobufs::toString));
+            StreamSupport.stream(executorResources.spliterator(), false)
+                .map(Protobufs::toString)
+                .collect(Collectors.toList()));
       }
       builder.clearResources().addAllResources(executorResources);
       return builder;

@@ -26,8 +26,11 @@ from apache.aurora.config.schema.base import (
     CountSlaPolicy as PystachioCountSlaPolicy,
     Docker,
     DockerImage,
+    DockerVolume,
     ExecutorConfig,
+    FileSecret,
     HealthCheckConfig,
+    HostPath,
     Job,
     Mesos,
     Metadata,
@@ -55,7 +58,8 @@ from gen.apache.aurora.api.ttypes import (
     Mode as ThriftMode,
     PartitionPolicy,
     PercentageSlaPolicy,
-    Resource
+    Resource,
+    VolumeType
 )
 from gen.apache.aurora.test.constants import INVALID_IDENTIFIERS, VALID_IDENTIFIERS
 
@@ -212,7 +216,105 @@ def test_config_with_volumes():
 
   assert thrift_volume.hostPath == host_path
   assert thrift_volume.containerPath == container_path
+  assert thrift_volume.volumeType == VolumeType.UNKNOWN
   assert thrift_volume.mode == ThriftMode.RO
+
+
+def test_config_with_host_volumes():
+  image_name = 'some-image'
+  image_tag = 'some-tag'
+  host_path = '/etc/secrets/role/'
+  container_path = '/etc/secrets/'
+  source = HostPath(path=host_path)
+
+  volume = Volume(container_path=container_path, mode=Mode('RO'), source=source)
+
+  container = Mesos(image=DockerImage(name=image_name, tag=image_tag), volumes=[volume])
+
+  job = convert_pystachio_to_thrift(HELLO_WORLD(container=container))
+
+  assert len(job.taskConfig.container.mesos.volumes) == 1
+  thrift_volume = job.taskConfig.container.mesos.volumes[0]
+
+  assert thrift_volume.containerPath == container_path
+  assert thrift_volume.volumeType == VolumeType.HOST_PATH
+  assert thrift_volume.mode == ThriftMode.RO
+  assert thrift_volume.hostPath is None
+  assert thrift_volume.source.hostPath == host_path
+
+
+def test_config_with_secret_volumes():
+  image_name = 'some-image'
+  image_tag = 'some-tag'
+  container_path = '/etc/secrets/token'
+  # test w/o key
+  source = FileSecret(name='devel/nobody/foo')
+
+  volume = Volume(container_path=container_path, mode=Mode('RO'), source=source)
+
+  container = Mesos(image=DockerImage(name=image_name, tag=image_tag), volumes=[volume])
+
+  job = convert_pystachio_to_thrift(HELLO_WORLD(container=container))
+
+  assert len(job.taskConfig.container.mesos.volumes) == 1
+  thrift_volume = job.taskConfig.container.mesos.volumes[0]
+
+  assert thrift_volume.containerPath == container_path
+  assert thrift_volume.mode == ThriftMode.RO
+  assert thrift_volume.hostPath is None
+  assert thrift_volume.volumeType == VolumeType.FILE_SECRET
+  assert thrift_volume.source.fileSecret.name == source.name().get()
+  assert thrift_volume.source.fileSecret.key is None
+
+
+def test_config_with_secret_key_volumes():
+  image_name = 'some-image'
+  image_tag = 'some-tag'
+  container_path = '/etc/secrets/token'
+  # test w/o key
+  source = FileSecret(name='devel/nobody/foo', key='bar')
+
+  volume = Volume(container_path=container_path, mode=Mode('RO'), source=source)
+
+  container = Mesos(image=DockerImage(name=image_name, tag=image_tag), volumes=[volume])
+
+  job = convert_pystachio_to_thrift(HELLO_WORLD(container=container))
+
+  assert len(job.taskConfig.container.mesos.volumes) == 1
+  thrift_volume = job.taskConfig.container.mesos.volumes[0]
+
+  assert thrift_volume.containerPath == container_path
+  assert thrift_volume.mode == ThriftMode.RO
+  assert thrift_volume.hostPath is None
+  assert thrift_volume.volumeType == VolumeType.FILE_SECRET
+  assert thrift_volume.source.fileSecret.name == source.name().get()
+  assert thrift_volume.source.fileSecret.key == source.key().get()
+
+
+def test_config_with_docker_volumes():
+  image_name = 'some-image'
+  image_tag = 'some-tag'
+  container_path = '/etc/secrets/'
+  source = DockerVolume(
+      driver="rexray", name="someEBSVolume", options=[Parameter(name="--foo", value="bar")])
+
+  volume = Volume(container_path=container_path, mode=Mode('RO'), source=source)
+
+  container = Mesos(image=DockerImage(name=image_name, tag=image_tag), volumes=[volume])
+
+  job = convert_pystachio_to_thrift(HELLO_WORLD(container=container))
+
+  assert len(job.taskConfig.container.mesos.volumes) == 1
+  thrift_volume = job.taskConfig.container.mesos.volumes[0]
+
+  assert thrift_volume.containerPath == container_path
+  assert thrift_volume.mode == ThriftMode.RO
+  assert thrift_volume.hostPath is None
+  assert thrift_volume.volumeType == VolumeType.DOCKER_VOLUME
+  assert thrift_volume.source.docker.driver == source.driver().get()
+  assert thrift_volume.source.docker.name == source.name().get()
+  assert thrift_volume.source.docker.options[0].name == "--foo"
+  assert thrift_volume.source.docker.options[0].value == "bar"
 
 
 def test_docker_with_parameters():

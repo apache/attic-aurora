@@ -562,11 +562,40 @@ unified-container, the container can be omitted from your job config.
 
 ### Volume Object
 
-  param                  | type     | description
-  -----                  | :----:   | -----------
-  ```container_path```   | String   | Path on the host to mount.
-  ```host_path```        | String   | Mount point in the container.
-  ```mode```             | Enum     | Mode of the mount, can be 'RW' or 'RO'.
+  param                  | type                                       | description
+  -----                  | :----:                                     | -----------
+  ```container_path```   | String                                     | Path on the host to mount.
+  ```host_path```        | String                                     | Mount point in the container.
+  ```mode```             | Enum                                       | Mode of the mount, can be 'RW' or 'RO'.
+  ```source```           | Choice(DockerVolume, FileSecret, HostPath) | Type of volume to mount.
+
+### DockerVolume Object
+
+*Note: In order to use this feature, the mesos-agent must be configured to enable the `docker/volume` [isolator](http://mesos.apache.org/documentation/latest/isolators/docker-volume/).*
+
+  param         | type             | description
+  -----         | :----:           | -----------
+  ```driver```  | String           | A driver volume helper application such as flocker, convoy, rexray, and etc.
+  ```name```    | String           | A represententation of the volume that the driver can manage.
+  ```options``` | List(Parameter)  | An optional list of parameters to pass to `dvdcli` to influence the driver behavior.
+
+### FileSecret Object
+
+*Note: In order to use this feature, the mesos-agent must be configured to enable the `volume/secret` [isolator](http://mesos.apache.org/documentation/latest/secrets/).*
+*Note: In order to use this feature, the mesos-agent must be provided with a secret resolver [implementation](https://github.com/apache/mesos/blob/004fb5fa27c2992b11a2fa51a8ec5a3f3de404db/include/mesos/secret/resolver.hpp).*
+*Note: The interpretation of this objects `name` and `key` is entirely dependent on the behavior of the secret resolver implementation in use.*
+*Note: This object can only provide File-based Secrets.*
+
+  param         | type             | description
+  -----         | :----:           | -----------
+  ```name```    | String           | A name of a secret to resolve.
+  ```key```     | String           | An optional key typically used to reference a single value within a secret that contains arbitrary key-value pairs.
+
+### HostPath Object
+
+  param      | type   | description
+  -----      | :----: | -----------
+  ```path``` | String | Mount point in the container.
 
 ### AppcImage
 

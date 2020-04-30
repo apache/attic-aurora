@@ -26,7 +26,10 @@ from apache.aurora.config.schema.base import (
     CountSlaPolicy as PystachioCountSlaPolicy,
     Docker,
     DockerImage as PystachioDockerImage,
+    DockerVolume as PystachioDockerVolume,
+    FileSecret as PystachioFileSecret,
     HealthCheckConfig,
+    HostPath as PystachioHostPath,
     Mesos,
     MesosContext,
     MesosTaskInstance,
@@ -36,7 +39,10 @@ from apache.aurora.config.schema.base import (
 )
 from apache.thermos.config.loader import ThermosTaskValidator
 
-from gen.apache.aurora.api.constants import AURORA_EXECUTOR_NAME, GOOD_IDENTIFIER_PATTERN_PYTHON
+from gen.apache.aurora.api.constants import (
+    AURORA_EXECUTOR_NAME,
+    GOOD_IDENTIFIER_PATTERN_PYTHON
+)
 from gen.apache.aurora.api.ttypes import (
     AppcImage,
     BatchJobUpdateStrategy,
@@ -48,7 +54,9 @@ from gen.apache.aurora.api.ttypes import (
     DockerContainer,
     DockerImage,
     DockerParameter,
+    DockerVolume,
     ExecutorConfig,
+    FileSecret,
     Identity,
     Image,
     JobConfiguration,
@@ -67,7 +75,9 @@ from gen.apache.aurora.api.ttypes import (
     TaskConstraint,
     ValueConstraint,
     VariableBatchJobUpdateStrategy,
-    Volume
+    Volume,
+    VolumeSource,
+    VolumeType
 )
 
 __all__ = (
@@ -223,18 +233,60 @@ def create_update_strategy_config(update_strategy):
                 unwrapped.autopause_after_batch())))
 
 
+def volume_to_thrift(volume):
+  containerPath = fully_interpolated(volume.container_path())
+  mode = parse_enum(Mode, volume.mode())
+  source = getattr(volume.source(), 'unwrap', lambda: Empty)()
+
+  # dockerVolumeDriver source
+  if isinstance(source, PystachioDockerVolume):
+    options = []
+    for option in source.options():
+      options.append(
+          DockerParameter(
+              fully_interpolated(option.name()),
+              fully_interpolated(option.value())))
+    return Volume(
+        containerPath=containerPath,
+        mode=mode,
+        source=VolumeSource(
+            docker=DockerVolume(
+                driver=fully_interpolated(source.driver()),
+                name=fully_interpolated(source.name()),
+                options=options)),
+        volumeType=VolumeType.DOCKER_VOLUME)
+
+  # fileSecret source
+  if isinstance(source, PystachioFileSecret):
+    kwargs = {'name': fully_interpolated(source.name())}
+    if source.key() is not Empty:
+      kwargs['key'] = fully_interpolated(source.key())
+    return Volume(
+        containerPath=containerPath,
+        mode=mode,
+        source=VolumeSource(fileSecret=FileSecret(**kwargs)),
+        volumeType=VolumeType.FILE_SECRET)
+
+  # hostPath source
+  if isinstance(source, PystachioHostPath):
+    return Volume(
+        containerPath=containerPath,
+        mode=mode,
+        source=VolumeSource(hostPath=fully_interpolated(source.path())),
+        volumeType=VolumeType.HOST_PATH)
+
+  # original bind mount implementation
+  if getattr(volume.host_path(), 'check', False):
+    return Volume(
+        containerPath=containerPath,
+        hostPath=fully_interpolated(volume.host_path()),
+        mode=mode)
+
+  raise InvalidConfig('If a volume is specified it must set one type.')
+
+
 def volumes_to_thrift(volumes):
-  thrift_volumes = []
-  for v in volumes:
-    mode = parse_enum(Mode, v.mode())
-    thrift_volumes.append(
-      Volume(
-          containerPath=fully_interpolated(v.container_path()),
-          hostPath=fully_interpolated(v.host_path()),
-          mode=mode
-      )
-    )
-  return thrift_volumes
+  return list(map(volume_to_thrift, volumes))
 
 
 def image_to_thrift(image):
