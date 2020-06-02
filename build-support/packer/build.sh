@@ -17,7 +17,7 @@ set -o errexit
 set -o nounset
 set -o verbose
 
-readonly MESOS_VERSION=1.6.1
+readonly MESOS_VERSION=1.7.2
 
 function remove_unused {
   # The default bento/ubuntu-16.04 image includes juju-core, which adds ~300 MB to our image.
@@ -28,6 +28,10 @@ function remove_unused {
 
 function install_base_packages {
   apt-get update
+  # Needed to fix a bug related to group creation which was reported for an earlier version but
+  # seems to come back from time to time.
+  # https://issues.apache.org/jira/browse/AURORA-1781
+  apt-get -y install --install-recommends linux-generic-hwe-16.04
   apt-get -y install \
       bison \
       curl \
@@ -63,7 +67,7 @@ function install_docker {
 
 function install_docker2aci {
   DOCKER2ACI_VERSION="0.17.2"
-  GOLANG_VERSION="1.11"
+  GOLANG_VERSION="1.13.5"
 
   TEMP_PATH=$(mktemp -d)
   pushd "$TEMP_PATH"
